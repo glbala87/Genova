@@ -1,0 +1,132 @@
+# ============================================================================
+# Genova Helm Chart – Production Overrides
+# ============================================================================
+# Usage:
+#   helm upgrade --install genova deploy/helm \
+#     -f deploy/helm/values.yaml \
+#     -f deploy/helm/values-production.yaml \
+#     --namespace genova-production
+
+replicaCount: 3
+
+image:
+  pullPolicy: IfNotPresent
+
+# ---- Model configuration ----
+model:
+  mixedPrecision: "fp16"
+  enableFlashAttention: true
+  enableTorchCompile: true
+  enableQuantization: false
+
+# ---- Server settings ----
+server:
+  workers: 2
+  logLevel: "warning"
+
+# ---- Resource limits (full allocation) ----
+resources:
+  requests:
+    cpu: "4"
+    memory: "16Gi"
+    nvidia.com/gpu: "1"
+  limits:
+    cpu: "8"
+    memory: "32Gi"
+    nvidia.com/gpu: "1"
+
+# ---- Ingress ----
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    nginx.ingress.kubernetes.io/rate-limit: "200"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+  hosts:
+    - host: genova-genomics.org
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: genova-production-tls
+      hosts:
+        - genova-genomics.org
+
+# ---- Autoscaling ----
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 15
+  targetGPUUtilization: 70
+  targetLatencySeconds: "2"
+  targetCPUUtilization: 75
+
+# ---- Pod Disruption Budget ----
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# ---- Probes ----
+probes:
+  readiness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  liveness:
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 5
+  startup:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 30
+
+# ---- Persistence ----
+persistence:
+  enabled: true
+  size: 50Gi
+
+# ---- Node scheduling ----
+nodeSelector:
+  nvidia.com/gpu: "true"
+  node-role: "inference"
+
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+  - key: dedicated
+    operator: Equal
+    value: inference
+    effect: NoSchedule
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - genova
+          topologyKey: kubernetes.io/hostname
+
+# ---- Pod annotations ----
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+  environment: "production"
+
+# ---- Service account ----
+serviceAccount:
+  create: true
+  name: "genova-inference"

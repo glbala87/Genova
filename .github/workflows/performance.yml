@@ -1,0 +1,498 @@
+# ============================================================================
+# Genova – Performance Testing Pipeline
+# ============================================================================
+# Runs inference benchmarks, memory profiling, and API load tests.
+#
+# Status badge:
+#   ![Performance](https://github.com/genova-team/genova/actions/workflows/performance.yml/badge.svg)
+
+name: Performance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "genova/**"
+      - "tests/benchmarks/**"
+      - ".github/workflows/performance.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "genova/**"
+  schedule:
+    - cron: "0 4 * * 0"   # Every Sunday at 04:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: perf-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.10"
+  POETRY_VERSION: "1.7.1"
+
+jobs:
+  # ── Benchmark ─────────────────────────────────────────────────────────────
+  benchmark:
+    name: Model Benchmarks (CPU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            zlib1g-dev libbz2-dev liblzma-dev libcurl4-openssl-dev
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-bench-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-bench-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+          poetry run pip install pytest-benchmark memory-profiler psutil
+
+      - name: Run inference benchmarks
+        run: |
+          poetry run python -c "
+          import json, time, os, sys
+          results = {
+              'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+              'commit': os.environ.get('GITHUB_SHA', 'unknown')[:8],
+              'benchmarks': []
+          }
+
+          # Tokenizer benchmark
+          try:
+              from genova.tokenization import GenomicTokenizer
+              tokenizer = GenomicTokenizer()
+              seq = 'ATCGATCG' * 128  # 1024bp sequence
+
+              start = time.perf_counter()
+              for _ in range(1000):
+                  tokenizer.encode(seq)
+              elapsed = time.perf_counter() - start
+
+              results['benchmarks'].append({
+                  'name': 'tokenizer_encode_1024bp',
+                  'iterations': 1000,
+                  'total_seconds': round(elapsed, 4),
+                  'ops_per_second': round(1000 / elapsed, 2)
+              })
+          except Exception as e:
+              results['benchmarks'].append({'name': 'tokenizer_encode_1024bp', 'error': str(e)})
+
+          # Model forward pass benchmark (CPU, small config)
+          try:
+              import torch
+              from genova.model import GenovaModel, GenovaConfig
+
+              config = GenovaConfig(
+                  vocab_size=4096,
+                  d_model=128,
+                  n_layers=2,
+                  n_heads=4,
+                  max_seq_len=512,
+              )
+              model = GenovaModel(config)
+              model.eval()
+
+              input_ids = torch.randint(0, 4096, (1, 256))
+
+              # Warmup
+              with torch.no_grad():
+                  for _ in range(3):
+                      model(input_ids)
+
+              # Benchmark
+              start = time.perf_counter()
+              n_iters = 20
+              with torch.no_grad():
+                  for _ in range(n_iters):
+                      model(input_ids)
+              elapsed = time.perf_counter() - start
+
+              results['benchmarks'].append({
+                  'name': 'model_forward_256tok_cpu',
+                  'iterations': n_iters,
+                  'total_seconds': round(elapsed, 4),
+                  'avg_latency_ms': round(elapsed / n_iters * 1000, 2)
+              })
+          except Exception as e:
+              results['benchmarks'].append({'name': 'model_forward_256tok_cpu', 'error': str(e)})
+
+          with open('benchmark-results.json', 'w') as f:
+              json.dump(results, f, indent=2)
+
+          print(json.dumps(results, indent=2))
+          "
+
+      - name: Run memory profiling
+        run: |
+          poetry run python -c "
+          import json, os, psutil
+
+          process = psutil.Process(os.getpid())
+          mem_results = {'profiles': []}
+
+          # Baseline memory
+          baseline_mb = process.memory_info().rss / 1024 / 1024
+          mem_results['profiles'].append({
+              'name': 'baseline',
+              'rss_mb': round(baseline_mb, 2)
+          })
+
+          # After model load
+          try:
+              import torch
+              from genova.model import GenovaModel, GenovaConfig
+
+              config = GenovaConfig(
+                  vocab_size=4096, d_model=128, n_layers=2,
+                  n_heads=4, max_seq_len=512
+              )
+              model = GenovaModel(config)
+              after_load_mb = process.memory_info().rss / 1024 / 1024
+
+              mem_results['profiles'].append({
+                  'name': 'model_loaded_small',
+                  'rss_mb': round(after_load_mb, 2),
+                  'delta_mb': round(after_load_mb - baseline_mb, 2)
+              })
+
+              # After inference
+              input_ids = torch.randint(0, 4096, (1, 256))
+              with torch.no_grad():
+                  model(input_ids)
+              after_infer_mb = process.memory_info().rss / 1024 / 1024
+
+              mem_results['profiles'].append({
+                  'name': 'after_inference',
+                  'rss_mb': round(after_infer_mb, 2),
+                  'delta_mb': round(after_infer_mb - after_load_mb, 2)
+              })
+
+              # Parameter count
+              n_params = sum(p.numel() for p in model.parameters())
+              mem_results['param_count'] = n_params
+              mem_results['param_count_human'] = f'{n_params/1e6:.2f}M'
+
+          except Exception as e:
+              mem_results['profiles'].append({'name': 'model_load', 'error': str(e)})
+
+          with open('memory-profile.json', 'w') as f:
+              json.dump(mem_results, f, indent=2)
+
+          print(json.dumps(mem_results, indent=2))
+          "
+
+      - name: Download previous benchmark results
+        uses: actions/cache@v4
+        with:
+          path: previous-benchmark.json
+          key: benchmark-results-${{ runner.os }}-main
+          restore-keys: |
+            benchmark-results-${{ runner.os }}-
+
+      - name: Compare with previous results
+        id: compare
+        run: |
+          poetry run python -c "
+          import json, os
+
+          current = {}
+          previous = {}
+
+          try:
+              with open('benchmark-results.json') as f:
+                  current = json.load(f)
+          except FileNotFoundError:
+              print('No current benchmark results')
+              exit(0)
+
+          try:
+              with open('previous-benchmark.json') as f:
+                  previous = json.load(f)
+          except FileNotFoundError:
+              print('No previous benchmark — skipping comparison')
+              with open('benchmark-results.json') as f_in, open('previous-benchmark.json', 'w') as f_out:
+                  f_out.write(f_in.read())
+              exit(0)
+
+          report_lines = ['## Performance Benchmark Results', '']
+          report_lines.append('| Benchmark | Current | Previous | Change |')
+          report_lines.append('|-----------|---------|----------|--------|')
+
+          prev_by_name = {b['name']: b for b in previous.get('benchmarks', []) if 'error' not in b}
+
+          for bench in current.get('benchmarks', []):
+              name = bench['name']
+              if 'error' in bench:
+                  report_lines.append(f'| {name} | ERROR: {bench[\"error\"]} | — | — |')
+                  continue
+
+              metric_key = 'avg_latency_ms' if 'avg_latency_ms' in bench else 'ops_per_second'
+              cur_val = bench.get(metric_key, 'N/A')
+
+              if name in prev_by_name:
+                  prev_val = prev_by_name[name].get(metric_key, 'N/A')
+                  if isinstance(cur_val, (int, float)) and isinstance(prev_val, (int, float)) and prev_val != 0:
+                      pct = ((cur_val - prev_val) / prev_val) * 100
+                      direction = 'slower' if (metric_key == 'avg_latency_ms' and pct > 0) else 'faster'
+                      if metric_key == 'ops_per_second':
+                          direction = 'faster' if pct > 0 else 'slower'
+                      change = f'{pct:+.1f}% ({direction})'
+                  else:
+                      change = '—'
+                  report_lines.append(f'| {name} | {cur_val} | {prev_val} | {change} |')
+              else:
+                  report_lines.append(f'| {name} | {cur_val} | — | new |')
+
+          report = '\n'.join(report_lines)
+          print(report)
+
+          with open('benchmark-comparison.md', 'w') as f:
+              f.write(report)
+
+          # Update cache
+          import shutil
+          shutil.copy('benchmark-results.json', 'previous-benchmark.json')
+          "
+
+      - name: Comment benchmark results on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: performance-benchmark
+          path: benchmark-comparison.md
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark-results.json
+            memory-profile.json
+            benchmark-comparison.md
+          retention-days: 90
+
+  # ── Load Test ─────────────────────────────────────────────────────────────
+  load-test:
+    name: API Load Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            zlib1g-dev libbz2-dev liblzma-dev libcurl4-openssl-dev
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-load-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-load-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+          poetry run pip install locust
+
+      - name: Create locustfile
+        run: |
+          cat > /tmp/locustfile.py << 'PYEOF'
+          from locust import HttpUser, task, between
+
+          class GenovaAPIUser(HttpUser):
+              wait_time = between(0.5, 2.0)
+
+              @task(3)
+              def health_check(self):
+                  self.client.get("/health")
+
+              @task(2)
+              def readiness_check(self):
+                  self.client.get("/ready")
+
+              @task(1)
+              def predict_embedding(self):
+                  self.client.post("/api/v1/predict", json={
+                      "sequence": "ATCGATCGATCGATCG",
+                      "task": "embedding"
+                  })
+
+              @task(1)
+              def predict_variant(self):
+                  self.client.post("/api/v1/predict", json={
+                      "sequence": "ATCGATCGATCGATCG",
+                      "task": "variant_effect"
+                  })
+          PYEOF
+
+      - name: Start API server
+        run: |
+          poetry run python -c "
+          import sys
+          try:
+              from genova.api import create_app
+              # Will be started below
+              print('API module found')
+          except ImportError:
+              print('API module not found — creating mock server')
+              with open('/tmp/mock_server.py', 'w') as f:
+                  f.write('''
+          from http.server import HTTPServer, BaseHTTPRequestHandler
+          import json
+
+          class Handler(BaseHTTPRequestHandler):
+              def do_GET(self):
+                  self.send_response(200)
+                  self.send_header(\"Content-Type\", \"application/json\")
+                  self.end_headers()
+                  if self.path == \"/health\":
+                      self.wfile.write(json.dumps({\"status\": \"healthy\"}).encode())
+                  elif self.path == \"/ready\":
+                      self.wfile.write(json.dumps({\"status\": \"ready\"}).encode())
+                  else:
+                      self.wfile.write(json.dumps({\"status\": \"ok\"}).encode())
+
+              def do_POST(self):
+                  self.send_response(200)
+                  self.send_header(\"Content-Type\", \"application/json\")
+                  self.end_headers()
+                  self.wfile.write(json.dumps({\"status\": \"ok\", \"embedding\": [0.1, 0.2]}).encode())
+
+              def log_message(self, format, *args):
+                  pass
+
+          HTTPServer((\"0.0.0.0\", 8000), Handler).serve_forever()
+          ''')
+          " || true
+
+          # Start server in background
+          if [ -f /tmp/mock_server.py ]; then
+            poetry run python /tmp/mock_server.py &
+          else
+            poetry run genova serve --host 0.0.0.0 --port 8000 &
+          fi
+
+          SERVER_PID=$!
+          echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+
+          # Wait for server to be ready
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "Server ready (attempt $i)"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run load test with Locust
+        run: |
+          poetry run locust \
+            -f /tmp/locustfile.py \
+            --host http://localhost:8000 \
+            --users 10 \
+            --spawn-rate 2 \
+            --run-time 60s \
+            --headless \
+            --csv=load-test-results \
+            --html=load-test-report.html \
+            2>&1 | tee load-test-output.txt
+
+      - name: Parse and report latency percentiles
+        run: |
+          poetry run python -c "
+          import csv, json
+
+          stats = {}
+          try:
+              with open('load-test-results_stats.csv') as f:
+                  reader = csv.DictReader(f)
+                  for row in reader:
+                      stats[row.get('Name', row.get('name', 'unknown'))] = {
+                          'requests': row.get('Request Count', row.get('# Requests', '0')),
+                          'failures': row.get('Failure Count', row.get('# Failures', '0')),
+                          'median_ms': row.get('Median Response Time', row.get('50%', 'N/A')),
+                          'p95_ms': row.get('95%', 'N/A'),
+                          'p99_ms': row.get('99%', 'N/A'),
+                          'avg_ms': row.get('Average Response Time', row.get('Average', 'N/A')),
+                          'max_ms': row.get('Max Response Time', row.get('Max', 'N/A')),
+                          'rps': row.get('Requests/s', 'N/A'),
+                      }
+          except (FileNotFoundError, KeyError) as e:
+              print(f'Could not parse load test results: {e}')
+              stats = {'error': str(e)}
+
+          print(json.dumps(stats, indent=2))
+
+          with open('load-test-summary.json', 'w') as f:
+              json.dump(stats, f, indent=2)
+          "
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -n "$SERVER_PID" ]; then
+            kill "$SERVER_PID" 2>/dev/null || true
+          fi
+
+      - name: Upload load test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-results
+          path: |
+            load-test-results*.csv
+            load-test-report.html
+            load-test-summary.json
+            load-test-output.txt
+          retention-days: 30

@@ -1,0 +1,90 @@
+# ============================================================================
+# Genova -- Small Model Configuration (Development / Testing)
+# ============================================================================
+# A lightweight config suitable for single-GPU training and rapid iteration.
+# ~3M parameters, trains in minutes on a single GPU.
+#
+# Usage:
+#   python scripts/train_foundation_model.py --config configs/train_small.yaml
+# ============================================================================
+
+data:
+  genome_fasta: "data/hg38.fa"
+  train_regions: "data/prepared/train_regions.bed"
+  val_regions: "data/prepared/val_regions.bed"
+  test_regions: "data/prepared/test_regions.bed"
+  seq_length: 1000                    # 1000bp windows
+  max_tokens: 1024
+  tokenizer: "nucleotide"            # Single-base tokens for small model
+  kmer_size: 6                       # Unused in nucleotide mode
+  stride: 1
+  batch_size: 32
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+  augmentations:
+    - reverse_complement
+    - random_shift
+  mask_prob: 0.15
+  mask_token_id: 3
+  vocab_size: 10                     # 5 nucleotides + 5 special tokens
+  cache_dir: ".cache/genova"
+
+model:
+  arch: "transformer"
+  d_model: 256                       # Small hidden dimension
+  n_heads: 4                         # 4 attention heads (256/4 = 64 per head)
+  n_layers: 4                        # 4 transformer layers
+  d_ff: 1024                         # Feed-forward dimension (4x d_model)
+  dropout: 0.1
+  attention_dropout: 0.1
+  max_position_embeddings: 1024
+  activation: "gelu"
+  norm_type: "layernorm"
+  rotary_emb: true
+  flash_attention: false             # Disabled for compatibility
+  gradient_checkpointing: false
+  tie_word_embeddings: true
+  initializer_range: 0.02
+  vocab_size: 10
+  pad_token_id: 0
+
+training:
+  output_dir: "outputs"
+  run_name: "genova_small"
+  seed: 42
+  epochs: 10                         # Quick training
+  max_steps: -1
+  lr: 1.0e-4
+  min_lr: 1.0e-6
+  weight_decay: 0.01
+  warmup_steps: 500
+  lr_scheduler: "cosine"
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  mixed_precision: "no"             # FP32 for debugging clarity
+  compile_model: false
+  save_every_n_steps: 2000
+  eval_every_n_steps: 500
+  log_every_n_steps: 50
+  early_stopping_patience: 5
+  resume_from_checkpoint: ""
+  ddp: false                         # Single GPU
+  deepspeed_config: ""
+  fsdp: false
+
+evaluation:
+  metrics:
+    - perplexity
+    - accuracy
+    - f1
+    - auroc
+  downstream_tasks:
+    - promoter_detection
+    - splice_site_prediction
+    - enhancer_classification
+    - variant_effect_prediction
+  num_eval_samples: 1000             # Subsample for speed
+  eval_batch_size: 64
+  save_predictions: false
+  prediction_output_dir: "predictions"

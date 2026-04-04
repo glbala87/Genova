@@ -1,0 +1,374 @@
+absl-py==2.4.0
+aiohappyeyeballs==2.6.1
+aiohttp==3.13.2
+aiosignal==1.4.0
+aldy==4.8.3
+alembic==1.17.2
+altair==6.0.0
+amply @ file:///home/conda/feedstock_root/build_artifacts/amply_1734602966974/work
+anaconda-anon-usage @ file:///home/task_176160626771849/conda-bld/anaconda-anon-usage_1761606317374/work
+anaconda-auth @ file:///opt/miniconda3/conda-bld/anaconda-cloud-auth-split_1759943045113/work
+anaconda-cli-base @ file:///opt/miniconda3/conda-bld/anaconda-cli-base_1762294806728/work
+anndata==0.12.6
+annotated-doc==0.0.4
+annotated-types @ file:///opt/miniconda3/conda-bld/annotated-types_1761744949290/work
+anthropic==0.79.0
+anyio==4.12.0
+anytree==2.13.0
+appdirs @ file:///home/conda/feedstock_root/build_artifacts/appdirs_1733753955715/work
+archspec @ file:///home/task_175812491784513/conda-bld/archspec_1758124989039/work
+argparse_dataclass @ file:///home/conda/feedstock_root/build_artifacts/argparse-dataclass_1764079528156/work
+array-api-compat==1.12.0
+asgiref==3.11.1
+attrs @ file:///home/conda/feedstock_root/build_artifacts/attrs_1759762205280/work
+beautifulsoup4==4.14.3
+biom_format==2.1.17
+biopython==1.86
+black==26.1.0
+blinker==1.9.0
+bokeh==3.8.1
+boltons @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_97h34kncb9/croot/boltons_1751383736162/work
+boto3==1.42.6
+botocore==1.42.6
+brotli==1.2.0
+brotlicffi @ file:///opt/miniconda3/conda-bld/brotlicffi_1761745164052/work
+cachetools==6.2.6
+captum==0.8.0
+catboost==1.2.8
+certifi @ file:///home/conda/feedstock_root/build_artifacts/certifi_1762976168352/work/certifi
+cffi @ file:///opt/miniconda3/conda-bld/cffi_1761832773185/work
+cfgv==3.5.0
+charset-normalizer @ file:///opt/miniconda3/conda-bld/charset-normalizer_1761744840553/work
+click @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_d2rtg2ejqc/croot/click_1744271604580/work
+cloudpickle==3.1.2
+colorama @ file:///home/conda/feedstock_root/build_artifacts/colorama_1733218098505/work
+coloredlogs @ file:///home/conda/feedstock_root/build_artifacts/coloredlogs_1733927977068/work
+colorlog==6.10.1
+colormath2==3.0.3
+conda @ file:///Users/runner/miniforge3/conda-bld/conda_1764077574254/work/conda-src
+conda-anaconda-telemetry @ file:///croot/conda-anaconda-telemetry_1755883788794/work
+conda-anaconda-tos @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_ebkcs5yxh6/croot/conda-anaconda-tos_1755123330773/work
+conda-content-trust @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/conda-content-trust_1728603284288/work
+conda-inject @ file:///home/conda/feedstock_root/build_artifacts/conda-inject_1717043556818/work
+conda-libmamba-solver @ file:///opt/miniconda3/conda-bld/conda-libmamba-solver_1761744809966/work/src
+conda-package-handling @ file:///opt/miniconda3/conda-bld/conda-package-handling_1762366402479/work
+conda_package_streaming @ file:///opt/miniconda3/conda-bld/conda-package-streaming_1762361629849/work
+ConfigArgParse @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_configargparse_1748302135/work
+connection-pool @ file:///home/conda/feedstock_root/build_artifacts/connection_pool_1608581887050/work
+contourpy==1.3.3
+coverage==7.13.3
+cryptography @ file:///opt/miniconda3/conda-bld/cryptography-split_1761931964095/work
+cssselect2==0.8.0
+cycler==0.12.1
+cytetype==0.12.0
+Cython==3.2.4
+cyvcf2==0.31.4
+dash==3.3.0
+decorator==5.2.1
+diskcache==5.6.3
+distlib==0.4.0
+distro @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/distro_1728591855492/work
+Django==6.0.2
+django-cors-headers==4.9.0
+django-filter==25.2
+djangorestframework==3.16.1
+docstring_parser==0.17.0
+docutils @ file:///home/conda/feedstock_root/build_artifacts/docutils_1762425747921/work
+dominate==2.9.1
+donfig==0.8.1.post1
+dpath @ file:///home/conda/feedstock_root/build_artifacts/dpath_1762165291153/work
+drf-spectacular==0.29.0
+editdistance==0.8.1
+edlib==1.3.9.post1
+eido @ file:///home/conda/feedstock_root/build_artifacts/eido_1729011009093/work
+# Editable install with no version control (epilongai==0.1.0)
+-e /Users/b-a-l-a/Downloads/EpiLongAI
+et_xmlfile==2.0.0
+exceptiongroup @ file:///home/conda/feedstock_root/build_artifacts/exceptiongroup_1763918002538/work
+fast-array-utils==1.3.1
+fastapi==0.129.0
+fastjsonschema @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_python-fastjsonschema_1755304154/work/dist
+filelock==3.25.2
+Flask==3.1.2
+fonttools==4.61.0
+frozendict @ file:///opt/miniconda3/conda-bld/frozendict_1761750665916/work
+frozenlist==1.8.0
+fsspec==2025.12.0
+future==1.0.0
+gitdb @ file:///home/conda/feedstock_root/build_artifacts/gitdb_1735887193964/work
+GitPython @ file:///home/conda/feedstock_root/build_artifacts/gitpython_1753444155689/work
+google-crc32c==1.7.1
+graphviz==0.21
+h11==0.16.0
+h5py==3.15.1
+hf-xet==1.2.0
+hmmlearn==0.3.3
+httpcore==1.0.9
+httptools==0.7.1
+httpx==0.27.2
+huggingface_hub==1.2.2
+humanfriendly @ file:///home/conda/feedstock_root/build_artifacts/humanfriendly_1733927922002/work
+humanize==4.14.0
+# Editable install with no version control (hurdlein==0.3.0)
+-e /Users/b-a-l-a/Downloads/textclaudecode/HurdleLin-main
+hyperopt==0.2.7
+identify==2.6.18
+idna @ file:///opt/miniconda3/conda-bld/idna_1761912005426/work
+igraph==0.11.9
+ImageIO==2.37.2
+imbalanced-learn==0.14.0
+immutabledict==4.3.1
+immutables @ file:///Users/runner/miniforge3/conda-bld/immutables_1757685383374/work
+importlib_metadata==8.7.0
+importlib_resources==6.5.2
+inflection==0.5.1
+iniconfig @ file:///home/conda/feedstock_root/build_artifacts/iniconfig_1760831328738/work
+intervaltree==3.2.1
+# Editable Git install with no remote (iris-sc==0.1.0)
+-e /Users/b-a-l-a/Downloads/Tool_dev_20032026/iris-sc
+itsdangerous==2.2.0
+jaraco.classes @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_97dr4u6nc1/croot/jaraco.classes_1755516335437/work
+jaraco.context @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/jaraco.context_1731716684676/work
+jaraco.functools @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_91zaq5_008/croot/jaraco.functools_1740408121405/work
+Jinja2 @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_jinja2_1764517220/work
+jiter==0.13.0
+jmespath==1.0.1
+joblib==1.5.2
+jpype1==1.6.0
+jsonpatch @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/jsonpatch_1728594556110/work
+jsonpointer @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_bdid71leqg/croot/jsonpointer_1753788445166/work
+jsonschema @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_jsonschema_1755595646/work
+jsonschema-specifications @ file:///tmp/tmptzik3dqa/src
+jupyter_core @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_jupyter_core_1760643864/work
+kaleido==0.2.1
+keyring @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_be9at15ui5/croot/keyring_1745484704517/work
+kiwisolver==1.4.9
+lazy_loader==0.4
+legacy-api-wrap==1.5
+libmambapy @ file:///opt/miniconda3/conda-bld/mamba-split_1757622986409/work/libmambapy
+librt==0.7.8
+lightgbm==4.6.0
+lightning==2.6.0
+lightning-utilities==0.15.2
+lime==0.2.0.1
+llvmlite==0.45.1
+Logbook==1.9.2
+logmuse @ file:///home/conda/feedstock_root/build_artifacts/logmuse_1735078170018/work
+loguru==0.7.3
+lxml==6.0.2
+Mako==1.3.10
+mappy==2.30
+Markdown==3.10
+markdown-it-py @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_6av49xs_3l/croot/markdown-it-py_1756299201304/work
+MarkupSafe @ file:///Users/runner/miniforge3/conda-bld/markupsafe_1759055271810/work
+matplotlib==3.10.7
+mdurl @ file:///opt/miniconda3/conda-bld/mdurl_1758552175942/work
+menuinst @ file:///opt/miniconda3/conda-bld/menuinst_1762860695894/work
+# Editable install with no version control (meta16s==1.0.0)
+-e /Users/b-a-l-a/Downloads/textclaudecode/pipelines/wf-16s/meta16s
+mlxtend==0.23.4
+more-itertools @ file:///opt/miniconda3/conda-bld/more-itertools_1761121541654/work
+mpmath==1.3.0
+msgpack==1.1.2
+# Editable install with no version control (multiconvvae==0.1.0)
+-e /Users/b-a-l-a/Downloads/textclaudecode/MultiConvVAE-main
+multidict==6.7.0
+# Editable install with no version control (multiomics-umap-framework==0.1.0)
+-e /Users/b-a-l-a/Downloads/textclaudecode/multiomics-umap-framework-main
+multiqc==1.33
+mypy==1.19.1
+mypy_extensions==1.1.0
+narwhals==2.13.0
+natsort==8.4.0
+nbformat @ file:///home/conda/feedstock_root/build_artifacts/nbformat_1733402752141/work
+nest-asyncio==1.6.0
+networkx==3.6
+nodeenv==1.10.0
+novae==1.0.1
+numba==0.62.1
+numcodecs==0.16.5
+numpy==2.3.5
+openai==2.17.0
+openpyxl==3.1.5
+optuna==4.6.0
+ortools==9.15.6755
+packaging @ file:///opt/miniconda3/conda-bld/packaging_1761049079023/work
+pandas @ file:///Users/runner/miniforge3/conda-bld/pandas_1764614673456/work
+pathspec==1.0.4
+patsy==1.0.2
+pephubclient @ file:///home/conda/feedstock_root/build_artifacts/pephubclient_1735078162946/work
+peppy @ file:///home/conda/feedstock_root/build_artifacts/peppy_1760990634896/work
+pillow==12.0.0
+pkce @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/pkce_1728592680499/work
+platformdirs @ file:///opt/miniconda3/conda-bld/platformdirs_1762356666077/work
+plotly==5.24.1
+pluggy @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_bei6q1cvvt/croot/pluggy_1733169621717/work
+polars==1.39.3
+polars-lts-cpu==1.33.1
+polars-runtime-32==1.39.3
+pre_commit==4.5.1
+pridepy==0.0.11
+propcache==0.4.1
+protobuf==6.33.5
+psutil @ file:///Users/runner/miniforge3/conda-bld/bld/rattler-build_psutil_1762093071/work
+PuLP @ file:///Users/runner/miniforge3/conda-bld/pulp_1757853266753/work
+py4j==0.10.9.9
+pyarrow==22.0.0
+pyBigWig==0.3.24
+pycosat @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_61k1o_oje7/croot/pycosat_1736868429741/work
+pycparser @ file:///opt/miniconda3/conda-bld/pycparser_1757496048647/work
+pydantic==2.11.10
+pydantic-settings @ file:///opt/miniconda3/conda-bld/pydantic-settings_1758784213628/work
+pydantic_core==2.33.2
+pydeck==0.9.1
+pydyf==0.12.1
+pyfaidx==0.9.0.4
+pyfastx==2.2.0
+Pygments @ file:///opt/miniconda3/conda-bld/pygments_1762431584667/work
+PyJWT @ file:///Users/builder/cbouss/buildout/croot/pyjwt_1739484683708/work
+# Editable install with no version control (pylcms==1.0.0)
+-e /Users/b-a-l-a/Downloads/textclaudecode/lcms-toolkit/python
+pynndescent==0.5.13
+pyparsing @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_pyparsing_1758436411/work
+PyPDF2==3.0.1
+pyphen==0.17.2
+pysam==0.23.3
+PySocks @ file:///opt/miniconda3/conda-bld/pysocks_1761753010927/work
+pytest @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_pytest_1763049198/work
+pytest-asyncio==1.3.0
+pytest-cov==7.0.0
+python-barcode==0.16.1
+python-dateutil @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_python-dateutil_1751104122/work
+python-discovery==1.2.1
+python-docx==1.2.0
+python-dotenv==1.1.1
+python-multipart==0.0.22
+python-pptx==1.0.2
+pytokens==0.4.1
+pytorch-lightning==2.6.0
+pytz @ file:///home/conda/feedstock_root/build_artifacts/pytz_1742920838005/work
+PyYAML @ file:///Users/runner/miniforge3/conda-bld/pyyaml_1758891851010/work
+RapidFuzz==3.14.3
+ratelimit==2.2.1
+readchar @ file:///opt/miniconda3/conda-bld/readchar_1760613300945/work
+referencing @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_referencing_1760379115/work
+regex==2025.11.3
+reportlab==4.4.9
+requests @ file:///opt/miniconda3/conda-bld/requests_1762359592010/work
+reretry @ file:///home/conda/feedstock_root/build_artifacts/reretry_1735477434309/work
+retrying==1.4.2
+rich @ file:///opt/miniconda3/conda-bld/rich_1760375480293/work
+rich-click==1.9.4
+rpds-py @ file:///Users/runner/miniforge3/conda-bld/bld/rattler-build_rpds-py_1764543165/work
+ruamel.yaml @ file:///opt/miniconda3/conda-bld/ruamel.yaml_1762535951282/work
+ruamel.yaml.clib @ file:///opt/miniconda3/conda-bld/ruamel.yaml.clib_1762530070208/work
+ruff==0.15.0
+ruptures==1.1.10
+s3transfer==0.16.0
+safetensors==0.7.0
+# Editable install with no version control (sc-integrated-network==0.3.0)
+-e /Users/b-a-l-a/Downloads/textclaudecode/sc-integrated-network-main
+scanpy==1.11.5
+scikit-bio==0.7.1.post1
+scikit-image==0.25.2
+scikit-learn==1.7.2
+scipy==1.16.3
+# Editable install with no version control (sciso==0.1.0)
+-e /Users/b-a-l-a/Downloads/Tool_dev_20032026/sciso
+seaborn==0.13.2
+semver @ file:///opt/miniconda3/conda-bld/semver_1761903026306/work
+session-info2==0.2.3
+session_info==1.0.1
+setuptools==80.9.0
+shap==0.49.1
+shellingham @ file:///opt/miniconda3/conda-bld/shellingham_1761912204150/work
+six @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_six_1753199211/work
+sklearn-pandas==2.2.0
+slack_sdk @ file:///home/conda/feedstock_root/build_artifacts/slack-sdk_1763658153295/work
+slicer==0.0.8
+smart_open @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_smart_open_1762641207/work/dist
+smmap @ file:///home/conda/feedstock_root/build_artifacts/smmap_1739781697784/work
+snakemake==9.18.1
+snakemake-interface-common @ file:///opt/conda/conda-bld/snakemake-interface-common_1759253090937/work
+snakemake-interface-executor-plugins @ file:///opt/conda/conda-bld/snakemake-interface-executor-plugins_1753822061496/work
+snakemake-interface-logger-plugins @ file:///opt/conda/conda-bld/snakemake-interface-logger-plugins_1759090722025/work
+snakemake-interface-report-plugins @ file:///opt/conda/conda-bld/snakemake-interface-report-plugins_1761910435031/work
+snakemake-interface-scheduler-plugins @ file:///opt/conda/conda-bld/snakemake-interface-scheduler-plugins_1760984069577/work
+snakemake-interface-storage-plugins==4.4.1
+sniffio==1.3.1
+sortedcontainers==2.4.0
+soupsieve==2.8.3
+spectra==0.1.0
+SQLAlchemy==2.0.44
+sqlmodel==0.0.37
+sqlparse==0.5.5
+starlette==0.52.1
+statsmodels==0.14.5
+stdlib-list==0.12.0
+streamlit==1.54.0
+sympy==1.14.0
+tabulate @ file:///home/conda/feedstock_root/build_artifacts/tabulate_1733589744265/work
+# Editable install with no version control (telofinder==0.1.0)
+-e /Users/b-a-l-a/Library/CloudStorage/OneDrive-hamad.qa/Desktop/telofinder/telofinder
+# Editable install with no version control (telomerediff==0.2.1)
+-e /private/tmp/telomerediff_walkthrough
+# Editable install with no version control (teloprobe==2.0.0)
+-e /Users/b-a-l-a/Downloads/Tool_dev_20032026/wf-teloseq/1.0.4/teloprobe
+# Editable install with no version control (teloseq==2.0.0)
+-e /Users/b-a-l-a/Downloads/Tool_dev_20032026/wf-teloseq/1.0.4/teloseq
+tenacity==9.1.4
+texttable==1.7.0
+threadpoolctl==3.6.0
+throttler @ file:///home/conda/feedstock_root/build_artifacts/throttler_1691135466785/work
+tifffile==2025.10.16
+tiktoken==0.12.0
+tinycss2==1.5.1
+tinyhtml5==2.0.0
+toml==0.10.2
+tomli @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_03b1up8uh3/croot/tomli_1753774598375/work
+torch==2.9.1
+torch-geometric==2.7.0
+torchmetrics==1.8.2
+tornado==6.5.2
+tqdm @ file:///opt/miniconda3/conda-bld/tqdm_1762863348900/work
+traitlets @ file:///home/conda/feedstock_root/build_artifacts/traitlets_1733367359838/work
+truststore @ file:///opt/miniconda3/conda-bld/truststore_1762520923820/work
+typeguard==4.4.4
+typer @ file:///opt/miniconda3/conda-bld/typer_1757580868385/work
+typer-slim==0.20.0
+typing-inspection @ file:///opt/miniconda3/conda-bld/typing-inspection_1760614169744/work
+typing_extensions @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_dffmcwqo6o/croot/typing_extensions_1756281471323/work
+tzdata @ file:///home/conda/feedstock_root/build_artifacts/python-tzdata_1742745135198/work
+ubiquerg @ file:///home/conda/feedstock_root/build_artifacts/ubiquerg_1719492656897/work
+umap-learn==0.5.9.post2
+uritemplate==4.2.0
+urllib3 @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_95v32ztwo_/croot/urllib3_1750775480393/work
+uvicorn==0.42.0
+uvloop==0.22.1
+# Editable install with no version control (varsage==0.1.0)
+-e /Users/b-a-l-a/Downloads/textclaudecode/varsage
+veracitools==0.1.3
+virtualenv==21.2.0
+# Editable install with no version control (warfarin-dose-ai==1.0.0)
+-e /Users/b-a-l-a/Downloads/Tool_dev_20032026/TOOLS/WarfarinDoseAI
+watchdog==6.0.0
+watchfiles==1.1.1
+weasyprint==68.1
+webencodings==0.5.1
+websockets==16.0
+Werkzeug==3.1.4
+whatshap==2.8
+wheel==0.45.1
+wrapt @ file:///Users/runner/miniforge3/conda-bld/wrapt_1756851648232/work
+xgboost==3.1.2
+xlrd==2.0.2
+xlsxwriter==3.2.9
+xopen==2.0.2
+xxhash==3.6.0
+xyzservices==2025.11.0
+yarl==1.22.0
+yte @ file:///home/conda/feedstock_root/build_artifacts/yte_1764250624582/work
+zarr==3.1.5
+zipp==3.23.0
+zopfli==0.4.0
+zstandard @ file:///opt/miniconda3/conda-bld/zstandard_1758189078532/work

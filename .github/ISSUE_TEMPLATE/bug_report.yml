@@ -1,0 +1,109 @@
+name: Bug Report
+description: Report a bug in Genova
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in the details below so we can investigate efficiently.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of the bug.
+      placeholder: Describe what happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal steps to reproduce the behaviour.
+      placeholder: |
+        1. Install genova v0.x.x
+        2. Run `genova train --config ...`
+        3. Observe error at epoch N
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behaviour
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behaviour
+      description: What actually happened. Include error messages or tracebacks.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of Genova is affected?
+      options:
+        - Model / Architecture
+        - Training / Optimization
+        - Data Loading / Preprocessing
+        - Tokenization
+        - API / Serving
+        - CLI
+        - Docker / Deployment
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Genova Version
+      description: Output of `genova --version` or the installed package version.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Relevant environment details. For example:
+        - OS: Ubuntu 22.04
+        - Python: 3.10.12
+        - PyTorch: 2.1.2
+        - CUDA: 12.1
+        - GPU: NVIDIA A100 80GB
+      render: markdown
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Paste any relevant log output (automatically rendered as code).
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate.
+          required: true
+        - label: I am using the latest version of Genova (or have noted the version above).
+          required: true

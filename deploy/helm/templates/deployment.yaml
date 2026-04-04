@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "genova.fullname" . }}
+  labels:
+    {{- include "genova.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "genova.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      annotations:
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+      labels:
+        {{- include "genova.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.serviceAccount.name }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- end }}
+      terminationGracePeriodSeconds: 60
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: genova
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.server.port }}
+              protocol: TCP
+          env:
+            - name: MODEL_ARCH
+              value: {{ .Values.model.arch | quote }}
+            - name: MODEL_WEIGHTS_PATH
+              value: {{ .Values.model.weightsPath | quote }}
+            - name: TOKENIZER_PATH
+              value: {{ .Values.model.tokenizerPath | quote }}
+            - name: MODEL_D_MODEL
+              value: {{ .Values.model.dModel | quote }}
+            - name: MODEL_N_HEADS
+              value: {{ .Values.model.nHeads | quote }}
+            - name: MODEL_N_LAYERS
+              value: {{ .Values.model.nLayers | quote }}
+            - name: MODEL_D_FF
+              value: {{ .Values.model.dFf | quote }}
+            - name: MODEL_VOCAB_SIZE
+              value: {{ .Values.model.vocabSize | quote }}
+            - name: MODEL_MAX_POSITION_EMBEDDINGS
+              value: {{ .Values.model.maxPositionEmbeddings | quote }}
+            - name: MIXED_PRECISION
+              value: {{ .Values.model.mixedPrecision | quote }}
+            - name: ENABLE_FLASH_ATTENTION
+              value: {{ .Values.model.enableFlashAttention | quote }}
+            - name: ENABLE_TORCH_COMPILE
+              value: {{ .Values.model.enableTorchCompile | quote }}
+            - name: SERVER_HOST
+              value: {{ .Values.server.host | quote }}
+            - name: SERVER_PORT
+              value: {{ .Values.server.port | quote }}
+            - name: SERVER_WORKERS
+              value: {{ .Values.server.workers | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.server.logLevel | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.probes.startup.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          volumeMounts:
+            - name: model-weights
+              mountPath: /models/genova
+              readOnly: true
+            - name: cache
+              mountPath: /tmp/genova-cache
+      volumes:
+        - name: model-weights
+          persistentVolumeClaim:
+            claimName: {{ if .Values.persistence.existingClaim }}{{ .Values.persistence.existingClaim }}{{ else }}{{ include "genova.fullname" . }}-weights{{ end }}
+        - name: cache
+          emptyDir:
+            sizeLimit: 10Gi

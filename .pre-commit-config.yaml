@@ -1,0 +1,46 @@
+# ============================================================================
+# Genova – Pre-commit hooks
+# Install: pre-commit install
+# Run all: pre-commit run --all-files
+# ============================================================================
+
+default_language_version:
+  python: python3.10
+
+repos:
+  # ── Black – code formatter ───────────────────────────────────────────────
+  - repo: https://github.com/psf/black
+    rev: "24.3.0"
+    hooks:
+      - id: black
+        args: ["--config=pyproject.toml"]
+        language_version: python3.10
+
+  # ── Ruff – fast linter ──────────────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: "v0.3.4"
+    hooks:
+      - id: ruff
+        args: ["--fix", "--exit-non-zero-on-fix"]
+
+  # ── isort – import sorting ──────────────────────────────────────────────
+  - repo: https://github.com/pycqa/isort
+    rev: "5.13.2"
+    hooks:
+      - id: isort
+        args: ["--settings-path=pyproject.toml"]
+
+  # ── General file hygiene ────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v4.5.0"
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ["--unsafe"]
+      - id: check-toml
+      - id: check-added-large-files
+        args: ["--maxkb=5000"]
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: detect-private-key

@@ -1,0 +1,100 @@
+# ============================================================================
+# Genova -- Mamba Model Configuration (Long-Context Genomics)
+# ============================================================================
+# Mamba (selective state space model) config for capturing long-range
+# genomic dependencies. Supports 10kb+ context windows without the
+# quadratic attention cost of Transformers.
+#
+# Mamba processes sequences in linear time O(n), making it ideal for
+# tasks like enhancer-promoter interaction, TAD boundary prediction,
+# and whole-gene analysis.
+#
+# ~85M parameters. Suitable for 2+ GPUs.
+#
+# Usage:
+#   python scripts/train_foundation_model.py \
+#       --config configs/train_mamba.yaml \
+#       --gpus 2
+# ============================================================================
+
+data:
+  genome_fasta: "data/hg38.fa"
+  train_regions: "data/prepared/train_regions.bed"
+  val_regions: "data/prepared/val_regions.bed"
+  test_regions: "data/prepared/test_regions.bed"
+  seq_length: 10000                   # 10kb windows -- Mamba handles long context
+  max_tokens: 4096
+  tokenizer: "kmer"                  # k-mer tokenisation
+  kmer_size: 6
+  stride: 1
+  batch_size: 32                     # Smaller batch due to longer sequences
+  num_workers: 8
+  pin_memory: true
+  prefetch_factor: 4
+  augmentations:
+    - reverse_complement
+    - random_shift
+  mask_prob: 0.15
+  mask_token_id: 3
+  vocab_size: 4096
+  cache_dir: ".cache/genova"
+
+model:
+  arch: "mamba"                      # Mamba selective state space model
+  d_model: 768                       # Hidden dimension
+  n_heads: 1                         # Mamba does not use multi-head attention
+  n_layers: 12                       # 12 Mamba blocks
+  d_ff: 3072                         # MLP dimension within each block
+  dropout: 0.1
+  attention_dropout: 0.0             # Not applicable for Mamba
+  max_position_embeddings: 10240     # Match or exceed seq_length
+  activation: "silu"                 # SiLU/Swish activation (standard for Mamba)
+  norm_type: "rmsnorm"              # RMSNorm (Mamba convention)
+  rotary_emb: false                  # Mamba uses learned position-free encoding
+  flash_attention: false             # Not applicable for Mamba
+  gradient_checkpointing: true       # Essential for long sequences
+  tie_word_embeddings: true
+  initializer_range: 0.02
+  vocab_size: 4096
+  pad_token_id: 0
+
+training:
+  output_dir: "outputs"
+  run_name: "genova_mamba"
+  seed: 42
+  epochs: 30                         # Mamba converges faster than Transformer
+  max_steps: -1
+  lr: 2.0e-4
+  min_lr: 1.0e-6
+  weight_decay: 0.01
+  warmup_steps: 5000
+  lr_scheduler: "cosine"
+  gradient_accumulation_steps: 4     # Effective batch = 32 * 4 * N_GPUs
+  max_grad_norm: 1.0
+  mixed_precision: "bf16"
+  compile_model: false
+  save_every_n_steps: 5000
+  eval_every_n_steps: 2000
+  log_every_n_steps: 100
+  early_stopping_patience: 8
+  resume_from_checkpoint: ""
+  ddp: true
+  deepspeed_config: ""
+  fsdp: false
+
+evaluation:
+  metrics:
+    - perplexity
+    - accuracy
+    - f1
+    - auroc
+  downstream_tasks:
+    - promoter_detection
+    - splice_site_prediction
+    - chromatin_accessibility
+    - enhancer_classification
+    - variant_effect_prediction
+  num_eval_samples: -1
+  eval_batch_size: 64
+  save_predictions: true
+  prediction_output_dir: "predictions"

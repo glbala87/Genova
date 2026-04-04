@@ -1,0 +1,18 @@
+apiVersion: v2
+name: genova
+description: Helm chart for the Genova genomic foundation model inference service
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+home: https://github.com/genova-genomics/genova
+maintainers:
+  - name: Genova Team
+    email: team@genova-genomics.org
+keywords:
+  - genomics
+  - deep-learning
+  - inference
+  - gpu
+  - foundation-model
+sources:
+  - https://github.com/genova-genomics/genova

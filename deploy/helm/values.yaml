@@ -1,0 +1,125 @@
+# ============================================================================
+# Genova Helm Chart – Default Values
+# ============================================================================
+
+replicaCount: 2
+
+image:
+  repository: genova/inference
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# ---- Model configuration ----
+model:
+  arch: "transformer"
+  weightsPath: "/models/genova/weights.pt"
+  tokenizerPath: "/models/genova/tokenizer.json"
+  dModel: 768
+  nHeads: 12
+  nLayers: 12
+  dFf: 3072
+  vocabSize: 4096
+  maxPositionEmbeddings: 2048
+  mixedPrecision: "fp16"
+  enableFlashAttention: true
+  enableTorchCompile: false
+  enableQuantization: false
+  quantizationBits: 8
+
+# ---- Server settings ----
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 1
+  logLevel: "info"
+
+# ---- Resource limits ----
+resources:
+  requests:
+    cpu: "4"
+    memory: "16Gi"
+    nvidia.com/gpu: "1"
+  limits:
+    cpu: "8"
+    memory: "32Gi"
+    nvidia.com/gpu: "1"
+
+# ---- Node scheduling ----
+nodeSelector:
+  nvidia.com/gpu: "true"
+
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+
+affinity: {}
+
+# ---- Service ----
+service:
+  type: ClusterIP
+  port: 80
+
+# ---- Ingress ----
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: genova.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: genova-tls
+      hosts:
+        - genova.example.com
+
+# ---- Autoscaling ----
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetGPUUtilization: 70
+  targetLatencySeconds: "2"
+  targetCPUUtilization: 80
+
+# ---- Probes ----
+probes:
+  readiness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  liveness:
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 5
+  startup:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 30
+
+# ---- Persistence (model weights) ----
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessModes:
+    - ReadOnlyMany
+  size: 50Gi
+
+# ---- Pod annotations ----
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+
+serviceAccount:
+  create: false
+  name: ""

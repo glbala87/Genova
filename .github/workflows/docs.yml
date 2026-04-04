@@ -1,0 +1,104 @@
+# ============================================================================
+# Genova – Documentation Build & Deploy
+# ============================================================================
+# Builds API docs with pdoc and deploys to GitHub Pages.
+#
+# Status badge:
+#   ![Docs](https://github.com/genova-team/genova/actions/workflows/docs.yml/badge.svg)
+
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "genova/**"
+      - "docs/**"
+      - "pyproject.toml"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: docs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.10"
+  POETRY_VERSION: "1.7.1"
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy Docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            zlib1g-dev libbz2-dev liblzma-dev libcurl4-openssl-dev
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-docs-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-docs-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+          poetry run pip install pdoc
+
+      - name: Build API documentation with pdoc
+        run: |
+          poetry run pdoc genova \
+            --output-dir docs/_build/html \
+            --docformat google \
+            --logo "https://raw.githubusercontent.com/genova-team/genova/main/docs/logo.png" \
+            --favicon "https://raw.githubusercontent.com/genova-team/genova/main/docs/favicon.ico" \
+            --footer-text "Genova Genomics Foundation Model"
+
+      - name: Copy additional docs assets
+        run: |
+          if [ -d docs/assets ]; then
+            cp -r docs/assets docs/_build/html/assets
+          fi
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_build/html
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,131 @@
+# ============================================================================
+# Genova – .gitignore
+# ============================================================================
+
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+*.whl
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ── Virtual environments ────────────────────────────────────────────────────
+.venv/
+venv/
+ENV/
+env/
+.python-version
+
+# ── Poetry ──────────────────────────────────────────────────────────────────
+# Keep poetry.lock in version control for reproducible builds
+
+# ── IDE / Editors ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# ── Jupyter ─────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ── Testing / Coverage ─────────────────────────────────────────────────────
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+junit.xml
+.pytest_cache/
+.tox/
+.nox/
+
+# ── Linting / type-checking ────────────────────────────────────────────────
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+
+# ── ML / Training artifacts ─────────────────────────────────────────────────
+checkpoints/
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+*.bin
+*.h5
+*.onnx
+runs/
+wandb/
+mlruns/
+lightning_logs/
+outputs/
+
+# ── TensorBoard ────────────────────────────────────────────────────────────
+logs/
+tb_logs/
+events.out.tfevents.*
+
+# ── Data (keep structure, ignore large files) ──────────────────────────────
+data/raw/
+data/processed/
+data/interim/
+*.fasta
+*.fa
+*.fq
+*.fastq
+*.bam
+*.bai
+*.sam
+*.vcf
+*.vcf.gz
+*.vcf.gz.tbi
+# Keep small test VCF
+!data/variants/clinvar_chr22.vcf
+*.bed
+*.bigwig
+*.bw
+*.parquet
+*.arrow
+*.hdf5
+*.h5
+*.zarr/
+
+# ── Secrets / credentials ──────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+secrets.yaml
+
+# ── OS files ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+._*
+
+# ── Docker ──────────────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── Misc ────────────────────────────────────────────────────────────────────
+*.log
+*.tmp
+*.bak
+*.cache
+.benchmarks/
+profile_output/
+data/reference/*.fai

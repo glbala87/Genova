@@ -1,0 +1,86 @@
+# ============================================================================
+# Genova -- Default Configuration
+# ============================================================================
+# Override any value via CLI:  genova train --set training.lr=3e-4
+
+data:
+  genome_fasta: "data/hg38.fa"
+  train_regions: "data/train_regions.bed"
+  val_regions: "data/val_regions.bed"
+  test_regions: "data/test_regions.bed"
+  seq_length: 512
+  max_tokens: 1024
+  tokenizer: "kmer"                # kmer | bpe | character
+  kmer_size: 6
+  stride: 1
+  batch_size: 32
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+  augmentations:
+    - reverse_complement
+    - random_shift
+  mask_prob: 0.15
+  mask_token_id: 4
+  vocab_size: 4096
+  cache_dir: ".cache/genova"
+
+model:
+  arch: "transformer"              # transformer | mamba | hyena
+  d_model: 768
+  n_heads: 12
+  n_layers: 12
+  d_ff: 3072
+  dropout: 0.1
+  attention_dropout: 0.1
+  max_position_embeddings: 2048
+  activation: "gelu"
+  norm_type: "layernorm"           # layernorm | rmsnorm
+  rotary_emb: true
+  flash_attention: true
+  gradient_checkpointing: false
+  tie_word_embeddings: true
+  initializer_range: 0.02
+  vocab_size: 4096
+  pad_token_id: 0
+
+training:
+  output_dir: "outputs"
+  run_name: "genova_pretrain"
+  seed: 42
+  epochs: 100
+  max_steps: -1                    # -1 = use epochs
+  lr: 1.0e-4
+  min_lr: 1.0e-6
+  weight_decay: 0.01
+  warmup_steps: 10000
+  lr_scheduler: "cosine"           # cosine | linear | constant
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  mixed_precision: "bf16"          # no | fp16 | bf16
+  compile_model: false             # torch.compile
+  save_every_n_steps: 5000
+  eval_every_n_steps: 1000
+  log_every_n_steps: 100
+  early_stopping_patience: 10
+  resume_from_checkpoint: ""
+  ddp: false
+  deepspeed_config: ""
+  fsdp: false
+
+evaluation:
+  metrics:
+    - perplexity
+    - accuracy
+    - f1
+    - auroc
+  downstream_tasks:
+    - promoter_detection
+    - splice_site_prediction
+    - chromatin_accessibility
+    - enhancer_classification
+    - variant_effect_prediction
+  num_eval_samples: -1             # -1 = evaluate all
+  eval_batch_size: 64
+  save_predictions: false
+  prediction_output_dir: "predictions"

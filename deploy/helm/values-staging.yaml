@@ -1,0 +1,87 @@
+# ============================================================================
+# Genova Helm Chart – Staging Overrides
+# ============================================================================
+# Usage:
+#   helm upgrade --install genova deploy/helm \
+#     -f deploy/helm/values.yaml \
+#     -f deploy/helm/values-staging.yaml \
+#     --namespace genova-staging
+
+replicaCount: 1
+
+image:
+  pullPolicy: Always
+
+# ---- Model configuration ----
+model:
+  mixedPrecision: "fp32"
+  enableFlashAttention: false
+  enableTorchCompile: false
+  enableQuantization: false
+
+# ---- Server settings ----
+server:
+  workers: 1
+  logLevel: "debug"
+
+# ---- Resource limits (smaller for staging) ----
+resources:
+  requests:
+    cpu: "2"
+    memory: "8Gi"
+    nvidia.com/gpu: "1"
+  limits:
+    cpu: "4"
+    memory: "16Gi"
+    nvidia.com/gpu: "1"
+
+# ---- Ingress ----
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/rate-limit: "50"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+  hosts:
+    - host: staging.genova-genomics.org
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: genova-staging-tls
+      hosts:
+        - staging.genova-genomics.org
+
+# ---- Autoscaling (disabled in staging) ----
+autoscaling:
+  enabled: false
+
+# ---- Probes (faster feedback in staging) ----
+probes:
+  readiness:
+    initialDelaySeconds: 15
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 5
+  startup:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 30
+
+# ---- Persistence ----
+persistence:
+  enabled: true
+  size: 20Gi
+
+# ---- Pod annotations ----
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+  environment: "staging"

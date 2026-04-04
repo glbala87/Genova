@@ -1,0 +1,88 @@
+# ============================================================================
+# Genova – Docker Build Context Exclusions
+# ============================================================================
+
+# Version control
+.git
+.gitignore
+
+# CI/CD and GitHub
+.github
+
+# Python artifacts
+__pycache__
+*.py[cod]
+*$py.class
+*.egg-info
+*.egg
+dist
+build
+*.whl
+
+# Virtual environments
+.venv
+venv
+env
+.conda
+
+# IDE / editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.project
+.settings
+
+# Testing
+.pytest_cache
+.ruff_cache
+.mypy_cache
+htmlcov
+coverage.xml
+junit.xml
+.coverage
+*.cover
+
+# Documentation
+docs/_build
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data and model weights (mounted at runtime, not baked into image)
+data/
+models/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.bin
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+
+# Logs
+logs/
+*.log
+
+# Helm charts (not needed in application image)
+deploy/helm
+
+# Docker compose (not needed inside the image)
+docker-compose*.yml
+
+# Benchmark and load-test artifacts
+benchmark-results*.json
+memory-profile*.json
+load-test-*

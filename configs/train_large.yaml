@@ -1,0 +1,95 @@
+# ============================================================================
+# Genova -- Large Model Configuration (Production Training)
+# ============================================================================
+# Full-scale config for multi-GPU production training. Uses k-mer (k=6)
+# tokenization for richer sequence representations.
+# ~85M parameters, designed for 4+ GPUs with gradient accumulation.
+#
+# Usage:
+#   python scripts/train_foundation_model.py \
+#       --config configs/train_large.yaml \
+#       --gpus 4 \
+#       --wandb-project genova
+# ============================================================================
+
+data:
+  genome_fasta: "data/hg38.fa"
+  train_regions: "data/prepared/train_regions.bed"
+  val_regions: "data/prepared/val_regions.bed"
+  test_regions: "data/prepared/test_regions.bed"
+  seq_length: 4000                    # 4000bp windows for long-range context
+  max_tokens: 2048
+  tokenizer: "kmer"                  # k-mer tokenisation (k=6)
+  kmer_size: 6                       # 6-mer vocabulary
+  stride: 1
+  batch_size: 64                     # Per-GPU batch size
+  num_workers: 8
+  pin_memory: true
+  prefetch_factor: 4
+  augmentations:
+    - reverse_complement
+    - random_shift
+  mask_prob: 0.15
+  mask_token_id: 3
+  vocab_size: 4096                   # Actual vocab set by tokenizer
+  cache_dir: ".cache/genova"
+
+model:
+  arch: "transformer"
+  d_model: 768                       # BERT-base sized hidden dimension
+  n_heads: 12                        # 12 attention heads (768/12 = 64 per head)
+  n_layers: 12                       # 12 transformer layers
+  d_ff: 3072                         # Feed-forward dimension (4x d_model)
+  dropout: 0.1
+  attention_dropout: 0.1
+  max_position_embeddings: 2048
+  activation: "gelu"
+  norm_type: "layernorm"
+  rotary_emb: true                   # Rotary positional embeddings
+  flash_attention: true              # FlashAttention-2 for efficiency
+  gradient_checkpointing: true       # Save memory at the cost of speed
+  tie_word_embeddings: true
+  initializer_range: 0.02
+  vocab_size: 4096
+  pad_token_id: 0
+
+training:
+  output_dir: "outputs"
+  run_name: "genova_large"
+  seed: 42
+  epochs: 50                         # Full training schedule
+  max_steps: -1
+  lr: 3.0e-4                        # Higher LR with warmup for large batch
+  min_lr: 1.0e-6
+  weight_decay: 0.01
+  warmup_steps: 10000                # 10k step warmup
+  lr_scheduler: "cosine"
+  gradient_accumulation_steps: 4     # Effective batch = 64 * 4 * N_GPUs
+  max_grad_norm: 1.0
+  mixed_precision: "bf16"           # BFloat16 mixed precision
+  compile_model: false               # Set true for PyTorch 2.x speedup
+  save_every_n_steps: 5000
+  eval_every_n_steps: 2000
+  log_every_n_steps: 100
+  early_stopping_patience: 10
+  resume_from_checkpoint: ""
+  ddp: true                          # Multi-GPU distributed training
+  deepspeed_config: ""
+  fsdp: false
+
+evaluation:
+  metrics:
+    - perplexity
+    - accuracy
+    - f1
+    - auroc
+  downstream_tasks:
+    - promoter_detection
+    - splice_site_prediction
+    - chromatin_accessibility
+    - enhancer_classification
+    - variant_effect_prediction
+  num_eval_samples: -1               # Evaluate all samples
+  eval_batch_size: 128
+  save_predictions: true
+  prediction_output_dir: "predictions"

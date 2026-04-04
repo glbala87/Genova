@@ -1,0 +1,35 @@
+# ============================================================================
+# Genova – Code Ownership
+# ============================================================================
+# Each line is a file pattern followed by one or more owners.
+# Order matters: later patterns take precedence over earlier ones.
+#
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ── Default owner (fallback) ────────────────────────────────────────────────
+*                               @genova-team/maintainers
+
+# ── Model / ML code ─────────────────────────────────────────────────────────
+genova/models/                  @genova-team/ml
+genova/model/                   @genova-team/ml
+genova/tokenization/            @genova-team/ml
+genova/training/                @genova-team/ml
+
+# ── Data engineering ─────────────────────────────────────────────────────────
+genova/data/                    @genova-team/data-engineering
+genova/datasets/                @genova-team/data-engineering
+
+# ── API / platform ──────────────────────────────────────────────────────────
+genova/api/                     @genova-team/platform
+genova/cli/                     @genova-team/platform
+
+# ── Deployment / infrastructure ─────────────────────────────────────────────
+deploy/                         @genova-team/devops
+.github/                        @genova-team/devops
+Dockerfile                      @genova-team/devops
+docker-compose*.yml             @genova-team/devops
+Makefile                        @genova-team/devops
+
+# ── Configuration / project metadata ────────────────────────────────────────
+pyproject.toml                  @genova-team/maintainers
+poetry.lock                     @genova-team/maintainers

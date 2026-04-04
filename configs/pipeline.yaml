@@ -1,0 +1,182 @@
+# ============================================================================
+# Genova -- Pipeline Configuration
+# ============================================================================
+# Centralized configuration for the end-to-end Genova training pipeline.
+# Used by scripts/run_full_pipeline.sh and individual pipeline scripts.
+#
+# Usage:
+#   bash scripts/run_full_pipeline.sh --config configs/pipeline.yaml
+# ============================================================================
+
+# ---------------------------------------------------------------------------
+# Data
+# ---------------------------------------------------------------------------
+data:
+  # Base directory for all data
+  base_dir: "data"
+
+  # Reference genome
+  reference:
+    fasta: "data/reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa"
+    fasta_index: "data/reference/Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai"
+    symlink: "data/hg38.fa"
+    assembly: "GRCh38"
+    source: "Ensembl release 112"
+
+  # Download URLs (stable, versioned for reproducibility)
+  download:
+    reference_url: "https://ftp.ensembl.org/pub/release-112/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
+    reference_md5: "3afa3950e92e1fd0cff03af1ce470409"
+    clinvar_url: "https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/clinvar.vcf.gz"
+    clinvar_tbi_url: "https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/clinvar.vcf.gz.tbi"
+    gencode_url: "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_44/gencode.v44.annotation.gtf.gz"
+    gencode_md5: "c89dae2fb06d5e4b2e5e7057e08bcd0b"
+    jaspar_url: "https://jaspar.elixir.no/download/data/2024/CORE/JASPAR2024_CORE_vertebrates_non-redundant_pfms_meme.txt"
+    phylop_url: "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/phyloP100way/hg38.phyloP100way.bw"
+
+  # Train/val/test split (Enformer/Basenji convention)
+  splits:
+    train: ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8",
+            "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15",
+            "chr16", "chr17"]
+    val: ["chr18", "chr19", "chr20"]
+    test: ["chr21", "chr22"]
+
+  # Prepared data output
+  prepared_dir: "data/prepared"
+
+# ---------------------------------------------------------------------------
+# Preprocessing
+# ---------------------------------------------------------------------------
+preprocessing:
+  # Sliding window parameters
+  window_size: 2048          # Base pairs per window
+  stride: 512                # Step between windows
+  max_n_fraction: 0.1        # Max fraction of N bases per window
+
+  # Tokenizer settings
+  tokenizer: "nucleotide"    # "nucleotide" or "kmer"
+  kmer_size: 6               # K-mer size (used when tokenizer=kmer)
+  max_tokens: 1024           # Maximum token sequence length
+
+  # MLM masking
+  mask_prob: 0.15            # Fraction of tokens to mask
+  mask_strategy: "bert"      # 80% MASK, 10% random, 10% keep
+
+  # Data augmentation
+  augmentations:
+    - reverse_complement     # Reverse complement augmentation
+    - random_shift           # Random positional shift
+
+  # Output format
+  output_format: "parquet"   # "parquet" or "jsonl"
+  shard_size: 50000          # Samples per shard
+  compression: "snappy"      # Parquet compression codec
+
+  # Parallelism
+  num_workers: 8
+
+# ---------------------------------------------------------------------------
+# Training
+# ---------------------------------------------------------------------------
+training:
+  # Config file reference (overridden by CLI --small/--large/--mamba)
+  config: "configs/train_small.yaml"
+
+  # Training parameters (override config file values)
+  epochs: 10
+  batch_size: 32
+  gradient_accumulation_steps: 1
+  mixed_precision: "no"
+
+  # Hardware
+  gpus: 1                    # Number of GPUs
+  num_workers: 4
+
+  # Output
+  output_dir: "outputs"
+
+  # Experiment tracking
+  wandb:
+    enabled: false
+    project: "genova-pretrain"
+    entity: ""               # Wandb entity/team
+    tags: ["pretrain", "genomics"]
+
+  # Checkpointing
+  save_every_n_steps: 2000
+  eval_every_n_steps: 500
+  keep_last_n_checkpoints: 3
+
+# ---------------------------------------------------------------------------
+# Evaluation
+# ---------------------------------------------------------------------------
+evaluation:
+  # Benchmark tasks
+  tasks:
+    bend:
+      - gene_finding
+      - promoter_detection
+      - splice_site_prediction
+      - enhancer_promoter_interaction
+      - chromatin_accessibility
+      - histone_modification
+    custom:
+      - promoter_prediction
+      - enhancer_classification
+      - variant_effect_prediction
+      - splice_site_classification
+
+  # Evaluation settings
+  batch_size: 64
+  max_length: 512
+  device: "auto"             # "auto", "cuda", or "cpu"
+
+  # Statistical testing
+  significance_level: 0.05
+  n_bootstrap: 1000
+
+  # Output
+  output_dir: "results/evaluation"
+  output_format:
+    - json                   # Machine-readable results
+    - latex                  # Publication-ready tables
+    - plots                  # Comparison figures (PDF)
+
+  # Baseline comparison
+  baseline_results: ""       # Path to baseline results JSON
+
+# ---------------------------------------------------------------------------
+# Deployment
+# ---------------------------------------------------------------------------
+deployment:
+  # Docker
+  docker:
+    image: "genova"
+    tag: "latest"
+    registry: "ghcr.io/genova-genomics"
+    dockerfile: "deploy/docker/Dockerfile"
+
+  # Kubernetes / Helm
+  helm:
+    chart: "deploy/helm/"
+    values: "deploy/helm/values.yaml"
+    namespace: "genova"
+    release_name: "genova"
+
+  # API serving
+  api:
+    host: "0.0.0.0"
+    port: 8000
+    workers: 4
+    max_batch_size: 32
+    timeout: 120
+
+  # Model export
+  export:
+    formats:
+      - pytorch              # .pt checkpoint
+      - torchscript          # TorchScript traced model
+      - onnx                 # ONNX for cross-framework deployment
+    quantization: false       # INT8 quantization
+    optimize: true           # TorchScript optimization

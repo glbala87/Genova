@@ -1,0 +1,128 @@
+# ============================================================================
+# Genova – Docker Compose (training, serving, development)
+# ============================================================================
+
+services:
+  # ── Training (GPU) ────────────────────────────────────────────────────────
+  train:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+      target: runtime
+    image: genova:latest
+    container_name: genova-train
+    command: >
+      python -m genova.cli.main train
+        --config /app/configs/train.yaml
+    volumes:
+      - ./data:/data:ro
+      - ./checkpoints:/checkpoints
+      - ./logs:/logs
+      - ./configs:/app/configs:ro
+    environment:
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-all}
+      - WANDB_API_KEY=${WANDB_API_KEY:-}
+      - WANDB_PROJECT=${WANDB_PROJECT:-genova}
+      - NCCL_DEBUG=${NCCL_DEBUG:-WARN}
+      - OMP_NUM_THREADS=${OMP_NUM_THREADS:-8}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    shm_size: "16gb"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    restart: "no"
+    networks:
+      - genova-net
+
+  # ── API Serving (GPU) ────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+      target: runtime
+    image: genova:latest
+    container_name: genova-api
+    command: >
+      python -m uvicorn genova.api.app:app
+        --host 0.0.0.0
+        --port 8000
+        --workers ${API_WORKERS:-2}
+        --timeout-keep-alive 120
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./checkpoints:/checkpoints:ro
+      - ./configs:/app/configs:ro
+      - ./logs:/logs
+    environment:
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+      - GENOVA_MODEL_PATH=${GENOVA_MODEL_PATH:-/checkpoints/latest}
+      - GENOVA_MAX_BATCH_SIZE=${GENOVA_MAX_BATCH_SIZE:-32}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - genova-net
+
+  # ── Development (hot-reload, no GPU required) ────────────────────────────
+  dev:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+      target: builder
+    image: genova:dev
+    container_name: genova-dev
+    command: >
+      python -m uvicorn genova.api.app:app
+        --host 0.0.0.0
+        --port 8000
+        --reload
+        --reload-dir /app/genova
+    ports:
+      - "${DEV_PORT:-8001}:8000"
+    volumes:
+      - .:/app
+      - ./data:/data
+      - ./checkpoints:/checkpoints
+      - ./logs:/logs
+    environment:
+      - GENOVA_ENV=development
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-}
+    restart: "no"
+    networks:
+      - genova-net
+
+  # ── TensorBoard ──────────────────────────────────────────────────────────
+  tensorboard:
+    image: tensorflow/tensorflow:latest
+    container_name: genova-tensorboard
+    command: tensorboard --logdir /logs --bind_all --port 6006
+    ports:
+      - "${TB_PORT:-6006}:6006"
+    volumes:
+      - ./logs:/logs:ro
+    restart: unless-stopped
+    networks:
+      - genova-net
+
+networks:
+  genova-net:
+    driver: bridge
