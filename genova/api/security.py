@@ -1,7 +1,8 @@
 """API authentication and rate limiting for the Genova REST API.
 
 Provides API key authentication and configurable rate limiting as FastAPI
-dependencies. All features are opt-in and controlled via environment variables.
+dependencies. Both are **enabled by default** for production safety and
+controlled via environment variables.
 
 Environment variables:
     GENOVA_API_KEYS: Comma-separated list of valid API keys.
@@ -9,7 +10,8 @@ Environment variables:
     GENOVA_RATE_LIMIT_RPM: Requests per minute per API key (default: 60).
     GENOVA_RATE_LIMIT_BACKEND: "memory" (default) or "redis".
     GENOVA_REDIS_URL: Redis URL for rate limiting (default: redis://localhost:6379/0).
-    GENOVA_AUTH_ENABLED: Set to "1" or "true" to enable authentication.
+    GENOVA_AUTH_ENABLED: Authentication enabled by default. Set to "0" to disable.
+    GENOVA_RATE_LIMIT_ENABLED: Rate limiting enabled by default. Set to "0" to disable.
     GENOVA_JWT_SECRET: Secret key for JWT token validation (optional).
     GENOVA_JWT_ALGORITHM: JWT algorithm (default: HS256).
 """
@@ -354,12 +356,21 @@ class RateLimiter:
 
 
 def is_auth_enabled() -> bool:
-    """Return True if authentication is enabled via environment."""
-    val = os.environ.get("GENOVA_AUTH_ENABLED", "").lower()
-    return val in ("1", "true", "yes", "on")
+    """Return True if authentication is enabled via environment.
+
+    Authentication is **enabled by default** in production. Set
+    ``GENOVA_AUTH_ENABLED=0`` to explicitly disable it (e.g. for local
+    development).
+    """
+    val = os.environ.get("GENOVA_AUTH_ENABLED", "1").lower()
+    return val not in ("0", "false", "no", "off")
 
 
 def is_rate_limit_enabled() -> bool:
-    """Return True if rate limiting is enabled via environment."""
-    val = os.environ.get("GENOVA_RATE_LIMIT_ENABLED", "").lower()
-    return val in ("1", "true", "yes", "on")
+    """Return True if rate limiting is enabled via environment.
+
+    Rate limiting is **enabled by default** in production. Set
+    ``GENOVA_RATE_LIMIT_ENABLED=0`` to explicitly disable it.
+    """
+    val = os.environ.get("GENOVA_RATE_LIMIT_ENABLED", "1").lower()
+    return val not in ("0", "false", "no", "off")

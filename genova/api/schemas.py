@@ -12,6 +12,11 @@ from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
+# Maximum sequence length accepted by the API to prevent memory abuse.
+MAX_SEQUENCE_LENGTH = 100_000
+# Maximum number of sequences per request.
+MAX_BATCH_SIZE = 1000
+
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -77,7 +82,7 @@ class VariantPredictionRequest(BaseModel):
     """Request body for /predict_variant endpoint."""
 
     variants: List[VariantInput] = Field(
-        ..., min_length=1, description="One or more variants to predict."
+        ..., min_length=1, max_length=MAX_BATCH_SIZE, description="One or more variants to predict."
     )
     vcf_content: Optional[str] = Field(
         None, description="Raw VCF file content. If provided, variants field is ignored."
@@ -108,7 +113,7 @@ class ExpressionRequest(BaseModel):
     """Request body for /predict_expression endpoint."""
 
     sequences: List[str] = Field(
-        ..., min_length=1, description="DNA sequences for expression prediction."
+        ..., min_length=1, max_length=MAX_BATCH_SIZE, description="DNA sequences for expression prediction."
     )
     num_targets: int = Field(
         1, ge=1, description="Number of expression targets to predict."
@@ -121,6 +126,10 @@ class ExpressionRequest(BaseModel):
         for i, seq in enumerate(v):
             if not seq:
                 raise ValueError(f"Sequence at index {i} is empty.")
+            if len(seq) > MAX_SEQUENCE_LENGTH:
+                raise ValueError(
+                    f"Sequence at index {i} exceeds maximum length of {MAX_SEQUENCE_LENGTH}."
+                )
             if not set(seq).issubset(valid):
                 raise ValueError(
                     f"Sequence at index {i} contains invalid characters."
@@ -154,7 +163,7 @@ class MethylationRequest(BaseModel):
     """Request body for /predict_methylation endpoint."""
 
     sequences: List[str] = Field(
-        ..., min_length=1, description="DNA sequences for methylation prediction."
+        ..., min_length=1, max_length=MAX_BATCH_SIZE, description="DNA sequences for methylation prediction."
     )
     num_targets: int = Field(
         1, ge=1, description="Number of CpG site targets to predict."
@@ -167,6 +176,10 @@ class MethylationRequest(BaseModel):
         for i, seq in enumerate(v):
             if not seq:
                 raise ValueError(f"Sequence at index {i} is empty.")
+            if len(seq) > MAX_SEQUENCE_LENGTH:
+                raise ValueError(
+                    f"Sequence at index {i} exceeds maximum length of {MAX_SEQUENCE_LENGTH}."
+                )
             if not set(seq).issubset(valid):
                 raise ValueError(
                     f"Sequence at index {i} contains invalid characters."
@@ -200,7 +213,7 @@ class EmbeddingRequest(BaseModel):
     """Request body for /embed endpoint."""
 
     sequences: List[str] = Field(
-        ..., min_length=1, description="DNA sequences to embed."
+        ..., min_length=1, max_length=MAX_BATCH_SIZE, description="DNA sequences to embed."
     )
     pooling: str = Field(
         "mean",
@@ -214,6 +227,10 @@ class EmbeddingRequest(BaseModel):
         for i, seq in enumerate(v):
             if not seq:
                 raise ValueError(f"Sequence at index {i} is empty.")
+            if len(seq) > MAX_SEQUENCE_LENGTH:
+                raise ValueError(
+                    f"Sequence at index {i} exceeds maximum length of {MAX_SEQUENCE_LENGTH}."
+                )
             if not set(seq).issubset(valid):
                 raise ValueError(
                     f"Sequence at index {i} contains invalid characters."

@@ -115,5 +115,11 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Default: show help
+LABEL org.opencontainers.image.title="Genova" \
+      org.opencontainers.image.description="Production-grade genomics foundation model" \
+      org.opencontainers.image.version="1.0.0" \
+      org.opencontainers.image.source="https://github.com/genova-team/genova" \
+      org.opencontainers.image.licenses="Apache-2.0"
+
 ENTRYPOINT ["tini", "--"]
 CMD ["python", "-m", "genova.cli.main", "--help"]

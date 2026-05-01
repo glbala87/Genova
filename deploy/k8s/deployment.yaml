@@ -36,9 +36,16 @@ spec:
           operator: Exists
           effect: NoSchedule
       terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: genova
-          image: genova/inference:latest
+          image: genova/inference:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -47,6 +54,19 @@ spec:
           envFrom:
             - configMapRef:
                 name: genova-model-config
+          env:
+            - name: GENOVA_AUTH_ENABLED
+              value: "1"
+            - name: GENOVA_RATE_LIMIT_ENABLED
+              value: "1"
+            - name: GENOVA_METRICS_ENABLED
+              value: "1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               cpu: "4"
@@ -87,6 +107,8 @@ spec:
               readOnly: true
             - name: cache
               mountPath: /tmp/genova-cache
+            - name: tmp
+              mountPath: /tmp
       volumes:
         - name: model-weights
           persistentVolumeClaim:
@@ -94,3 +116,6 @@ spec:
         - name: cache
           emptyDir:
             sizeLimit: 10Gi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi

@@ -121,6 +121,10 @@ Desktop.ini
 # ── Docker ──────────────────────────────────────────────────────────────────
 docker-compose.override.yml
 
+# ── Development artifacts ─────────────────────────────────────────────────────
+Genova_methods_execution.txt
+Genova_methods_execution_RAWFILE.rtf
+
 # ── Misc ────────────────────────────────────────────────────────────────────
 *.log
 *.tmp

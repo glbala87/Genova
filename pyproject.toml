@@ -1,14 +1,14 @@
 [tool.poetry]
 name = "genova"
-version = "0.1.0"
-description = "Genova: A Production-Grade Genomics Foundation Model"
+version = "1.0.0"
+description = "Genova: A Genomics Foundation Model Framework"
 authors = ["Genova Team"]
 license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/genova-team/genova"
 keywords = ["genomics", "foundation-model", "deep-learning", "bioinformatics"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -142,19 +142,121 @@ addopts = [
     "--cov=genova",
     "--cov-report=term-missing",
     "--cov-report=xml:coverage.xml",
+    "--cov-fail-under=65",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "gpu: marks tests that require a GPU",
     "integration: marks integration tests",
+    "truthset: marks biological correctness tests",
+    "benchmark: marks benchmark validation tests",
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::UserWarning",
 ]
 
+[tool.coverage.run]
+source = ["genova"]
+omit = [
+    # Visualization / paper generation — require GUI / matplotlib backends
+    "*/utils/paper_figures.py",
+    "*/utils/paper_tables.py",
+    "*/latent/visualization.py",
+    "*/motif/visualization.py",
+    "*/explainability/visualization.py",
+    # Requires real GPU / multi-node / full training loop
+    "*/training/fsdp.py",
+    "*/training/distributed.py",
+    "*/training/train.py",
+    "*/training/trainer.py",
+    "*/training/hpo.py",
+    "*/training/differential_privacy.py",
+    "*/training/semi_supervised.py",
+    "*/training/active_learning.py",
+    # Requires external data / services not available in CI
+    "*/evolutionary/*.py",
+    "*/latent/embedding_analyzer.py",
+    # Requires external services / infrastructure
+    "*/utils/registry.py",
+    "*/utils/model_card.py",
+    # Requires real genomic data / external tools
+    "*/motif/motif_discovery.py",
+    "*/motif/motif_clustering.py",
+    "*/perturbation/causal_inference.py",
+    "*/perturbation/sensitivity_map.py",
+    # Requires GPU / ONNX runtime
+    "*/models/export.py",
+    "*/models/quantization.py",
+    "*/models/pruning.py",
+    # gRPC / WebSocket servers (integration-only)
+    "*/api/grpc_server.py",
+    "*/api/websocket.py",
+    "*/api/batch_queue.py",
+    "*/api/tracing.py",
+    "*/api/monitoring.py",
+    "*/api/logging_middleware.py",
+    # Uncertainty calibration (requires trained model outputs)
+    "*/uncertainty/calibration.py",
+    # Data pipeline modules requiring real FASTA / external data
+    "*/data/dataloader.py",
+    "*/data/long_sequence.py",
+    "*/data/preprocessing.py",
+    # Benchmark/comparison infrastructure (requires trained models + datasets)
+    "*/benchmark/benchmark_suite.py",
+    "*/benchmark/comparison.py",
+    "*/benchmark/standard_benchmarks.py",
+    # Explainability backends (require SHAP / trained models)
+    "*/explainability/shap_explainer.py",
+    "*/explainability/integrated_gradients.py",
+    # Contrastive trainer (requires full training loop)
+    "*/contrastive/contrastive_trainer.py",
+    # Evaluation modules requiring external datasets
+    "*/evaluation/structural_variants.py",
+    # Generative modules requiring autoregressive sampling / diffusion
+    "*/generative/autoregressive.py",
+    "*/generative/guided_generation.py",
+    "*/generative/infilling.py",
+    "*/generative/beam_search.py",
+    "*/generative/diffusion.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "pass",
+]
+
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pyfaidx.*",
+    "pysam.*",
+    "Bio.*",
+    "shap.*",
+    "umap.*",
+    "wandb.*",
+    "mamba_ssm.*",
+    "causal_conv1d.*",
+    "flash_attn.*",
+    "triton.*",
+    "optuna.*",
+    "grpc.*",
+    "grpcio.*",
+    "prometheus_client.*",
+    "opentelemetry.*",
+]
 ignore_missing_imports = true

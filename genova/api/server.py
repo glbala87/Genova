@@ -11,9 +11,11 @@ Or via the CLI::
 
     genova serve --host 0.0.0.0 --port 8000 --model-path ./checkpoints/best
 
-Optional features (all off by default, controlled via environment variables):
-    - Authentication: GENOVA_AUTH_ENABLED=1
-    - Rate limiting:  GENOVA_RATE_LIMIT_ENABLED=1
+Security features (enabled by default in production):
+    - Authentication: GENOVA_AUTH_ENABLED=1 (default). Set to 0 to disable.
+    - Rate limiting:  GENOVA_RATE_LIMIT_ENABLED=1 (default). Set to 0 to disable.
+
+Optional observability features (off by default):
     - Metrics:        GENOVA_METRICS_ENABLED=1
     - Tracing:        GENOVA_TRACING_ENABLED=1
     - Request logging: GENOVA_REQUEST_LOGGING_ENABLED=1
@@ -123,13 +125,17 @@ def create_app(
         lifespan=lifespan,
     )
 
-    # CORS middleware
+    # CORS middleware — restrict origins in production via GENOVA_CORS_ORIGINS
+    import os
+
+    cors_origins_str = os.environ.get("GENOVA_CORS_ORIGINS", "")
+    cors_origins = [o.strip() for o in cors_origins_str.split(",") if o.strip()] if cors_origins_str else []
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=cors_origins if cors_origins else ["*"],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "X-API-Key", "Content-Type"],
     )
 
     # --- Optional integrations (all off by default) -----------------------
@@ -345,7 +351,10 @@ def _register_routes(app: FastAPI) -> None:
             raise
         except Exception as e:
             logger.error("Variant prediction failed: {}", e)
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(
+                status_code=500,
+                detail="Variant prediction failed. Check server logs for details.",
+            )
 
     # ------------------------------------------------------------------
     # Expression prediction
@@ -396,7 +405,10 @@ def _register_routes(app: FastAPI) -> None:
 
         except Exception as e:
             logger.error("Expression prediction failed: {}", e)
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(
+                status_code=500,
+                detail="Expression prediction failed. Check server logs for details.",
+            )
 
     # ------------------------------------------------------------------
     # Methylation prediction
@@ -447,7 +459,10 @@ def _register_routes(app: FastAPI) -> None:
 
         except Exception as e:
             logger.error("Methylation prediction failed: {}", e)
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(
+                status_code=500,
+                detail="Methylation prediction failed. Check server logs for details.",
+            )
 
     # ------------------------------------------------------------------
     # Embedding extraction
@@ -499,4 +514,7 @@ def _register_routes(app: FastAPI) -> None:
 
         except Exception as e:
             logger.error("Embedding extraction failed: {}", e)
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(
+                status_code=500,
+                detail="Embedding extraction failed. Check server logs for details.",
+            )

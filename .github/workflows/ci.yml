@@ -1,5 +1,5 @@
 # ============================================================================
-# Genova – Enhanced CI Pipeline (Lint + Test + Build + Docker)
+# Genova – Production CI Pipeline (Lint + Security + Test + Build + Docker)
 # ============================================================================
 # Status badge:
 #   ![CI](https://github.com/genova-team/genova/actions/workflows/ci.yml/badge.svg)
@@ -70,7 +70,39 @@ jobs:
         run: poetry run isort --check-only --diff genova/ tests/
 
       - name: Type checking (mypy)
-        run: poetry run mypy genova/ --ignore-missing-imports --no-error-summary || true
+        run: poetry run mypy genova/ --no-error-summary
+
+  # ── Security Audit ─────────────────────────────────────────────────────
+  security:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Export requirements
+        run: poetry export -f requirements.txt --without-hashes -o requirements-audit.txt
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run pip-audit
+        run: pip-audit -r requirements-audit.txt --strict --desc
 
   # ── Test ──────────────────────────────────────────────────────────────────
   test:
@@ -124,7 +156,7 @@ jobs:
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov \
             --cov-report=term-missing \
-            --cov-fail-under=30 \
+            --cov-fail-under=65 \
             --junitxml=junit.xml \
             -v
 
@@ -151,7 +183,7 @@ jobs:
     name: Build Package
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [lint, test]
+    needs: [lint, security, test]
     permissions:
       contents: read
     steps:
@@ -206,7 +238,7 @@ jobs:
     name: Docker Build & Scan
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [lint, test]
+    needs: [lint, security, test]
     permissions:
       contents: read
       packages: write
@@ -239,6 +271,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix=
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
@@ -255,11 +289,11 @@ jobs:
           load: ${{ github.event_name == 'pull_request' }}
 
       - name: Run Trivy container security scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: table
-          exit-code: 0
+          exit-code: 1
           severity: CRITICAL,HIGH
           timeout: 10m
 

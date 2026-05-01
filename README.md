@@ -1,6 +1,11 @@
 # Genova
 
-**A Production-Grade Genomics Foundation Model**
+**A Production-Grade Genomics Foundation Model Framework**
+
+[![CI](https://github.com/genova-team/genova/actions/workflows/ci.yml/badge.svg)](https://github.com/genova-team/genova/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Version](https://img.shields.io/badge/version-1.0.0-informational.svg)](CHANGELOG.md)
 
 Genova is a modular, extensible framework for building, training, and deploying genomic foundation models. Pre-trained on the human reference genome (GRCh38) using masked language modeling, Genova learns contextual representations of DNA sequences for variant effect prediction, regulatory element classification, sequence generation, and multi-omics integration.
 
@@ -16,8 +21,9 @@ Genova is a modular, extensible framework for building, training, and deploying 
 - **Uncertainty**: MC Dropout, Bayesian layers, deep ensembles, conformal prediction
 - **Multi-omics**: DNA + methylation + RNA-seq fusion with cross-modal attention
 - **Population-aware**: population embeddings, allele frequency encoding, bias auditing
-- **Production-ready**: FastAPI + WebSocket + gRPC, Prometheus, OpenTelemetry, auth, rate limiting
+- **Serving infrastructure**: FastAPI + WebSocket + gRPC, Prometheus, OpenTelemetry, auth, rate limiting
 - **Deployable**: Docker (GPU), Helm charts, Kubernetes, ONNX/TorchScript export, INT8 quantization
+- **Security by default**: Authentication and rate limiting enabled out of the box
 
 ## Project Stats
 
@@ -29,7 +35,8 @@ Genova is a modular, extensible framework for building, training, and deploying 
 | Tests | 522 passing |
 | CI/CD pipelines | 5 |
 | Trained models | 3 (852K, 3.3M, 86M params) |
-| Production checks | 27/27 PASS |
+| Coverage threshold | 65% (core modules) |
+| Benchmark validation | ClinVar, OMIM, BEND |
 
 ---
 
@@ -202,7 +209,7 @@ genova/
 │   ├── batch_queue.py     #   Dynamic batching
 │   ├── inference.py       #   InferenceEngine
 │   ├── schemas.py         #   Pydantic models
-│   ├── security.py        #   API key + JWT auth + rate limiting
+│   ├── security.py        #   API key + JWT auth + rate limiting (on by default)
 │   ├── monitoring.py      #   Prometheus metrics
 │   ├── tracing.py         #   OpenTelemetry
 │   └── logging_middleware.py # Structured request logging
@@ -260,11 +267,15 @@ Trained on real human genomic data (GRCh38):
 ## API
 
 ```bash
-# Start server
+# Start server (auth + rate limiting enabled by default)
 genova serve --model-path outputs/my_model/best_model.pt
 
+# For local development without auth:
+GENOVA_AUTH_ENABLED=0 GENOVA_RATE_LIMIT_ENABLED=0 \
+  genova serve --model-path outputs/my_model/best_model.pt
+
 # Endpoints
-GET  /health              # Health check
+GET  /health              # Health check (unauthenticated)
 GET  /model/info          # Model metadata
 POST /predict_variant     # Variant pathogenicity
 POST /predict_expression  # Gene expression
@@ -277,18 +288,23 @@ WS   /ws/generate         # Streaming generation
 ```python
 import httpx
 
-# Predict variant effect
-response = httpx.post("http://localhost:8000/predict_variant", json={
-    "reference_sequence": "ATCGATCGATCG",
-    "variants": [{"position": 4, "ref": "A", "alt": "G"}]
-})
+# Predict variant effect (with API key)
+response = httpx.post(
+    "http://localhost:8000/predict_variant",
+    headers={"X-API-Key": "your-api-key"},
+    json={
+        "reference_sequence": "ATCGATCGATCG",
+        "variants": [{"position": 4, "ref": "A", "alt": "G"}],
+    },
+)
 print(response.json())
 
 # Get embedding
-response = httpx.post("http://localhost:8000/embed", json={
-    "sequence": "ATCGATCGATCGATCG",
-    "pooling": "mean"
-})
+response = httpx.post(
+    "http://localhost:8000/embed",
+    headers={"X-API-Key": "your-api-key"},
+    json={"sequence": "ATCGATCGATCGATCG", "pooling": "mean"},
+)
 embedding = response.json()["embedding"]
 ```
 
@@ -355,6 +371,25 @@ print(f"Mean: {result['mean'].shape}, Variance: {result['variance'].shape}")
 
 ---
 
+## Security
+
+Genova 1.0 ships with **security enabled by default**:
+
+- **Authentication**: API key or JWT-based auth is on by default. Configure keys via `GENOVA_API_KEYS` or `GENOVA_API_KEYS_FILE`.
+- **Rate limiting**: 60 RPM per key by default. Supports Redis backend for multi-instance deployments.
+- **CORS**: Restricted origins via `GENOVA_CORS_ORIGINS`. Set to your domain(s) in production.
+- **Container security**: Non-root user, read-only filesystem, dropped capabilities.
+
+For local development, disable security features explicitly:
+```bash
+export GENOVA_AUTH_ENABLED=0
+export GENOVA_RATE_LIMIT_ENABLED=0
+```
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+
+---
+
 ## Deployment
 
 ### Docker
@@ -394,10 +429,10 @@ python -m pytest tests/unit/ -v              # 221 unit tests
 python -m pytest tests/integration/ -v       # 204 integration tests
 python -m pytest tests/truthset/ -v          # 97 biological correctness tests
 
-# With coverage
+# With coverage (65% minimum enforced on core modules)
 make test-cov
 
-# Full CI (lint + test + build)
+# Full CI (lint + security audit + test + build)
 make ci
 ```
 
@@ -413,7 +448,7 @@ make install
 make format
 make lint
 
-# Type check
+# Type check (strict mode)
 make typecheck
 
 # Security scan
@@ -431,7 +466,7 @@ make benchmark
 
 | Pipeline | Trigger | What it does |
 |----------|---------|-------------|
-| `ci.yml` | Push/PR | Lint, test (Python 3.10-3.12), build, Docker scan |
+| `ci.yml` | Push/PR | Lint, security audit, test (Python 3.10-3.12), build, Docker scan |
 | `cd.yml` | Tag `v*` | Release, deploy staging, deploy production |
 | `security.yml` | Push + weekly | Dependency scan, SAST, container scan, secret scan |
 | `docs.yml` | Push to main | Build API docs, deploy to GitHub Pages |
@@ -443,6 +478,8 @@ make benchmark
 
 | Document | Location |
 |----------|----------|
+| Changelog | [CHANGELOG.md](CHANGELOG.md) |
+| Security Policy | [SECURITY.md](SECURITY.md) |
 | Methodology (1,246 lines) | [docs/METHODOLOGY.md](docs/METHODOLOGY.md) |
 | Execution Guide | [docs/EXECUTION_GUIDE.md](docs/EXECUTION_GUIDE.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
@@ -451,6 +488,26 @@ make benchmark
 | Training Notebook | [docs/notebooks/02_training.ipynb](docs/notebooks/02_training.ipynb) |
 | Variant Analysis Notebook | [docs/notebooks/03_variant_analysis.ipynb](docs/notebooks/03_variant_analysis.ipynb) |
 | Generation Notebook | [docs/notebooks/04_generation.ipynb](docs/notebooks/04_generation.ipynb) |
+
+---
+
+## Benchmark Validation
+
+Genova validates variant prediction accuracy against independent benchmarks:
+
+| Benchmark | Metric | Threshold | Status |
+|-----------|--------|-----------|--------|
+| ClinVar pathogenic/benign SNPs | AUROC | >= 0.80 | Validated |
+| OMIM disease-causing variants | Precision@90%Recall | >= 0.70 | Validated |
+| BEND promoter detection | AUROC | >= 0.75 | Validated |
+| Nucleotide Transformer tasks | Average AUROC | >= 0.70 | Validated |
+| Transition/transversion ratio | Ti/Tv in [2.0, 2.2] | Biologically plausible | Validated |
+
+Run benchmark validation:
+```bash
+python -m pytest tests/benchmark/ -v -m benchmark
+python -m pytest tests/truthset/ -v -m truthset
+```
 
 ---
 
