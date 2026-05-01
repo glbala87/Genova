@@ -11,6 +11,30 @@ Genova is a modular, extensible framework for building, training, and deploying 
 
 ---
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [CLI Reference](#cli-reference)
+- [Training](#training)
+- [Inference & Prediction](#inference--prediction)
+- [API Server](#api-server)
+- [Python API](#python-api)
+- [Security](#security)
+- [Deployment](#deployment)
+- [Testing](#testing)
+- [Development](#development)
+- [Project Architecture](#project-architecture)
+- [Benchmark Validation](#benchmark-validation)
+- [Documentation](#documentation)
+- [License](#license)
+- [Citation](#citation)
+- [References](#references)
+
+---
+
 ## Key Features
 
 - **Multiple architectures**: Transformer (with GQA, MQA, Flash Attention, RoPE, ALiBi, SwiGLU) and Mamba SSM
@@ -32,7 +56,7 @@ Genova is a modular, extensible framework for building, training, and deploying 
 | Python files | 149 |
 | Lines of code | 55,894 |
 | Modules | 113 |
-| Tests | 522 passing |
+| Tests | 777 passing |
 | CI/CD pipelines | 5 |
 | Trained models | 3 (852K, 3.3M, 86M params) |
 | Coverage threshold | 65% (core modules) |
@@ -40,61 +64,673 @@ Genova is a modular, extensible framework for building, training, and deploying 
 
 ---
 
-## Quick Start
+## Requirements
 
-### Install
+- **Python**: 3.10, 3.11, 3.12, or 3.13
+- **OS**: Linux (recommended), macOS, WSL2
+- **GPU** (optional but recommended): NVIDIA GPU with CUDA 12.1+ for training and fast inference
+- **RAM**: 16 GB minimum (32 GB+ recommended for large models)
+- **Disk**: ~500 MB for the framework, ~3 GB for full genome data (GRCh38)
+
+### System dependencies (Linux)
 
 ```bash
-git clone https://github.com/genova-genomics/genova.git
-cd genova
-pip install -r requirements.txt
-pip install -e .
+sudo apt-get update
+sudo apt-get install -y --no-install-recommends \
+    zlib1g-dev libbz2-dev liblzma-dev libcurl4-openssl-dev
 ```
 
-### Download genome data
+### System dependencies (macOS)
 
 ```bash
-# Single chromosome for testing (~12MB)
+brew install xz bzip2 curl
+```
+
+---
+
+## Installation
+
+### Option 1: Poetry (recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/genova-genomics/genova.git
+cd genova
+
+# Install Poetry if not already installed
+curl -sSL https://install.python-poetry.org | python3 -
+
+# Install all dependencies (including dev tools)
+poetry install
+
+# Or install production dependencies only
+poetry install --only main
+
+# Verify the installation
+poetry run genova --version
+```
+
+### Option 2: pip
+
+```bash
+# Clone the repository
+git clone https://github.com/genova-genomics/genova.git
+cd genova
+
+# Create and activate a virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# .venv\Scripts\activate   # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install Genova in editable mode
+pip install -e .
+
+# Verify the installation
+genova --version
+```
+
+### Option 3: pip (production only)
+
+```bash
+pip install -r requirements.txt
+pip install .
+```
+
+### Optional: Mamba SSM support (requires CUDA)
+
+```bash
+poetry install --extras mamba
+# or
+pip install mamba-ssm causal-conv1d
+```
+
+### Post-installation setup
+
+```bash
+# Set up pre-commit hooks (development)
+poetry run pre-commit install
+
+# Copy and configure environment variables
+cp .env.example .env
+# Edit .env with your API keys and settings
+```
+
+---
+
+## Quick Start
+
+### 1. Download genome data
+
+```bash
+# Single chromosome for testing (~12 MB)
 mkdir -p data/reference
 curl -L -o data/reference/chr22.fa.gz \
     "https://hgdownload.soe.ucsc.edu/goldenPath/hg38/chromosomes/chr22.fa.gz"
 gunzip data/reference/chr22.fa.gz
 
-# Or all 22 autosomes (~3GB)
+# Full genome — all 22 autosomes (~3 GB)
 bash scripts/download_data.sh data/
 ```
 
-### Train a model
+### 2. Train a small model (CPU, ~30 min)
 
 ```bash
-# Small model (CPU, ~30 min)
 python scripts/train_on_real_data.py \
     --train-fasta data/reference/chr22.fa \
     --val-fasta data/reference/chr21.fa \
     --output-dir outputs/my_model \
     --d-model 128 --n-layers 4 --n-heads 4 \
     --epochs 2 --batch-size 32
-
-# Full model (GPU recommended)
-make pipeline-large
 ```
 
-### Use the trained model
+### 3. Run predictions
 
 ```bash
 # Predict variant effects
 genova predict --vcf variants.vcf --reference genome.fa --output results.csv
 
-# Extract embeddings
+# Extract sequence embeddings
 genova embed --input sequences.fa --output embeddings.npy
+```
 
-# Start API server
+### 4. Start the API server
+
+```bash
+# Production mode (auth enabled, requires API key)
 genova serve --model-path outputs/my_model/best_model.pt --port 8000
+
+# Development mode (auth disabled)
+GENOVA_AUTH_ENABLED=0 GENOVA_RATE_LIMIT_ENABLED=0 \
+    genova serve --model-path outputs/my_model/best_model.pt --port 8000
 ```
 
 ---
 
-## Architecture
+## CLI Reference
+
+Genova provides a full-featured CLI via `genova` (or `poetry run genova`).
+
+```
+genova [COMMAND] [OPTIONS]
+```
+
+### Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `train` | Train a genomic foundation model | `genova train --config configs/train_small.yaml` |
+| `predict` | Predict variant effects from a VCF file | `genova predict --vcf input.vcf --reference ref.fa --output results.csv` |
+| `serve` | Start the REST API server | `genova serve --model-path ./checkpoints/best --port 8000` |
+| `embed` | Extract sequence embeddings to a file | `genova embed --input sequences.fa --output embeddings.npy` |
+| `evaluate` | Evaluate a model on test data | `genova evaluate --model-path ./checkpoints/best --test-data ./data/test` |
+| `preprocess` | Preprocess FASTA into training-ready format | `genova preprocess --fasta genome.fa --output-dir ./data` |
+| `--version` | Print version and exit | `genova --version` |
+
+### Train options
+
+```bash
+genova train \
+    --config configs/default.yaml \           # Path to YAML config file
+    --set training.lr=3e-4 \                  # Override any config value
+    --set training.epochs=10 \
+    --set model.d_model=256
+```
+
+### Predict options
+
+```bash
+genova predict \
+    --vcf input.vcf \                         # Input VCF file
+    --reference data/reference/chr22.fa \      # Reference FASTA
+    --model-path outputs/my_model/best_model.pt \  # Trained model
+    --output results.csv                       # Output predictions
+```
+
+### Serve options
+
+```bash
+genova serve \
+    --model-path outputs/my_model/best_model.pt \  # Trained model
+    --host 0.0.0.0 \                               # Bind address
+    --port 8000                                     # Port
+```
+
+---
+
+## Training
+
+### Using predefined configurations
+
+```bash
+# Small model — 4 layers, 128d, 852K params (development/testing)
+genova train --config configs/train_small.yaml
+
+# Large model — 12 layers, 768d, 86M params (production, GPU recommended)
+genova train --config configs/train_large.yaml
+
+# Mamba SSM — 12 layers, 768d, 55M params (long sequences 100K+ bp, requires CUDA)
+genova train --config configs/train_mamba.yaml
+```
+
+### Using Makefile shortcuts
+
+```bash
+make pipeline-small    # Full pipeline with small config
+make pipeline-large    # Full pipeline with large config (GPU recommended)
+make pipeline-mamba    # Full pipeline with Mamba config
+```
+
+### Custom training with config overrides
+
+```bash
+genova train \
+    --config configs/default.yaml \
+    --set model.arch=transformer \
+    --set model.d_model=512 \
+    --set model.n_layers=8 \
+    --set model.n_heads=8 \
+    --set training.lr=1e-4 \
+    --set training.epochs=20 \
+    --set training.mixed_precision=bf16 \
+    --set data.batch_size=64
+```
+
+### Distributed training (multi-GPU)
+
+```bash
+# DDP with 4 GPUs
+torchrun --nproc_per_node=4 -m genova.training.train \
+    --config configs/train_large.yaml
+
+# FSDP (for models that don't fit on a single GPU)
+genova train --config configs/train_large.yaml \
+    --set training.fsdp=true
+```
+
+### Model configurations
+
+| Config | Layers | Hidden | Heads | Params | Use Case |
+|--------|--------|--------|-------|--------|----------|
+| Small | 4 | 128 | 4 | 852K | Development, testing |
+| Medium | 4 | 256 | 4 | 3.3M | Quick experiments |
+| Full | 12 | 768 | 12 | 86M | Production |
+| Mamba | 12 | 768 | -- | 55M | Long sequences (100K+ bp) |
+
+### Training results
+
+Trained on real human genomic data (GRCh38):
+
+| Model | Data | Val PPL | Val Acc | Variant Acc |
+|-------|------|---------|---------|-------------|
+| Genova-4L-128d | chr22 (50M bp) | **3.55** | 39.9% | -- |
+| Genova-4L-256d | 5 chr (337M bp) | **3.56** | 39.9% | **86.7%** |
+| Genova-12L-768d | 20 chr (2.78B bp) | 3.74* | 32.3%* | -- |
+| DNABERT (ref.) | Full genome | ~4.2 | ~35% | -- |
+
+*Undertrained on CPU (3K steps). Needs GPU for full convergence.
+
+---
+
+## Inference & Prediction
+
+### Variant effect prediction (CLI)
+
+```bash
+# From a VCF file
+genova predict \
+    --vcf patients/sample.vcf \
+    --reference data/reference/hg38.fa \
+    --model-path outputs/my_model/best_model.pt \
+    --output results/predictions.csv
+
+# Output columns: chrom, pos, ref, alt, score, label, confidence
+```
+
+### Embedding extraction (CLI)
+
+```bash
+# Extract embeddings from a FASTA file
+genova embed \
+    --input sequences.fa \
+    --model-path outputs/my_model/best_model.pt \
+    --output embeddings.npy
+
+# Load in Python
+import numpy as np
+embeddings = np.load("embeddings.npy")
+```
+
+### Model evaluation (CLI)
+
+```bash
+genova evaluate \
+    --model-path outputs/my_model/best_model.pt \
+    --test-data data/test \
+    --output results/evaluation.json
+```
+
+---
+
+## API Server
+
+### Starting the server
+
+```bash
+# Production (auth + rate limiting enabled by default)
+genova serve --model-path outputs/my_model/best_model.pt --port 8000
+
+# Development (security disabled)
+GENOVA_AUTH_ENABLED=0 GENOVA_RATE_LIMIT_ENABLED=0 \
+    genova serve --model-path outputs/my_model/best_model.pt --port 8000
+
+# Via uvicorn directly
+uvicorn genova.api.server:create_app --factory --host 0.0.0.0 --port 8000
+
+# Via Make
+make serve
+```
+
+### API endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/health` | No | Health check and model status |
+| `GET` | `/model/info` | No | Model metadata and configuration |
+| `POST` | `/predict_variant` | Yes | Variant pathogenicity prediction |
+| `POST` | `/predict_expression` | Yes | Gene expression prediction |
+| `POST` | `/predict_methylation` | Yes | Methylation beta value prediction |
+| `POST` | `/embed` | Yes | Sequence embedding extraction |
+| `GET` | `/metrics` | No | Prometheus metrics |
+| `WS` | `/ws/generate` | Yes | Streaming sequence generation |
+
+### API usage examples
+
+```bash
+# Health check (no auth required)
+curl http://localhost:8000/health
+
+# Predict variant effect (with API key)
+curl -X POST http://localhost:8000/predict_variant \
+    -H "Content-Type: application/json" \
+    -H "X-API-Key: your-api-key" \
+    -d '{
+        "variants": [{"chrom": "chr17", "pos": 7577121, "ref": "C", "alt": "T"}],
+        "reference_sequence": "ACGTACGTACGTACGT",
+        "window_size": 512
+    }'
+
+# Extract embeddings
+curl -X POST http://localhost:8000/embed \
+    -H "Content-Type: application/json" \
+    -H "X-API-Key: your-api-key" \
+    -d '{"sequences": ["ATCGATCGATCGATCG"], "pooling": "mean"}'
+```
+
+```python
+import httpx
+
+# Python client example
+client = httpx.Client(
+    base_url="http://localhost:8000",
+    headers={"X-API-Key": "your-api-key"},
+)
+
+# Variant prediction
+response = client.post("/predict_variant", json={
+    "variants": [{"ref": "A", "alt": "G", "sequence": "ATCGATCGATCG"}],
+})
+print(response.json())
+
+# Embedding extraction
+response = client.post("/embed", json={
+    "sequences": ["ATCGATCGATCGATCG"],
+    "pooling": "mean",
+})
+embedding = response.json()["embeddings"][0]["embedding"]
+```
+
+### Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GENOVA_AUTH_ENABLED` | `1` | Enable API key / JWT authentication |
+| `GENOVA_RATE_LIMIT_ENABLED` | `1` | Enable rate limiting |
+| `GENOVA_RATE_LIMIT_RPM` | `60` | Requests per minute per key |
+| `GENOVA_RATE_LIMIT_BACKEND` | `memory` | `memory` or `redis` |
+| `GENOVA_REDIS_URL` | `redis://localhost:6379/0` | Redis URL for rate limiting |
+| `GENOVA_API_KEYS` | -- | Comma-separated API keys |
+| `GENOVA_API_KEYS_FILE` | -- | Path to file with one key per line |
+| `GENOVA_JWT_SECRET` | -- | JWT signing secret |
+| `GENOVA_CORS_ORIGINS` | `*` | Comma-separated allowed origins |
+| `GENOVA_METRICS_ENABLED` | `0` | Enable Prometheus metrics |
+| `GENOVA_TRACING_ENABLED` | `0` | Enable OpenTelemetry tracing |
+| `GENOVA_REQUEST_LOGGING_ENABLED` | `0` | Enable structured request logging |
+
+---
+
+## Python API
+
+### Basic usage
+
+```python
+import torch
+from genova.data.tokenizer import GenomicTokenizer
+from genova.models.model_factory import create_model
+from genova.utils.config import ModelConfig
+
+# Create model
+config = ModelConfig(arch="transformer", d_model=256, n_layers=4,
+                     n_heads=4, d_ff=1024, vocab_size=10)
+model = create_model(config, task="mlm")
+
+# Tokenize
+tok = GenomicTokenizer(mode="nucleotide")
+tok.build_vocab()
+
+# Forward pass
+sequence = "ATCGATCGATCGATCGATCG"
+input_ids = torch.tensor([tok.encode(sequence)])
+output = model(input_ids)
+print(output["logits"].shape)  # (1, seq_len, vocab_size)
+```
+
+### Variant prediction
+
+```python
+from genova.perturbation.variant_simulator import VariantSimulator
+
+sim = VariantSimulator(model, tokenizer=tok)
+effects = sim.saturate_snps("ATCGATCGATCGATCG")
+for e in effects[:5]:
+    print(f"  pos={e.position} {e.ref_allele}>{e.alt_allele} effect={e.effect_size:.4f}")
+```
+
+### Sequence generation
+
+```python
+from genova.generative.autoregressive import AutoregressiveGenerator
+
+gen = AutoregressiveGenerator(model, tokenizer=tok)
+result = gen.generate(num_sequences=5, max_length=100, temperature=0.8, top_k=10)
+```
+
+### Explainability
+
+```python
+from genova.explainability.integrated_gradients import IntegratedGradientsExplainer
+
+explainer = IntegratedGradientsExplainer(model, tok)
+attributions = explainer.explain(sequence, n_steps=100)
+```
+
+### Uncertainty quantification
+
+```python
+from genova.uncertainty.mc_dropout import MCDropoutPredictor
+
+mc = MCDropoutPredictor(model, n_forward_passes=30)
+result = mc.predict_with_uncertainty(input_ids)
+print(f"Mean: {result['mean'].shape}, Variance: {result['variance'].shape}")
+```
+
+### Inference engine (programmatic)
+
+```python
+from genova.api.inference import InferenceEngine
+
+engine = InferenceEngine(
+    model_path="outputs/my_model",
+    device="cuda",      # or "cpu", "auto"
+    max_batch_size=64,
+)
+engine.load()
+
+# Embed sequences
+embeddings = engine.embed(["ACGTACGTACGT", "GGCCAATTGGCC"], pooling="mean")
+
+# Predict variants
+results = engine.predict_variant(
+    ref_sequences=["NNNNNACGTNNNNN"],
+    alt_sequences=["NNNNNACGGNNNNN"],
+)
+print(results)  # [{"score": 0.73, "label": "pathogenic", "confidence": 0.46}]
+
+# Clean up
+engine.unload()
+```
+
+---
+
+## Security
+
+Genova 1.0 ships with **security enabled by default**:
+
+- **Authentication**: API key or JWT-based auth is on by default. Configure keys via `GENOVA_API_KEYS` or `GENOVA_API_KEYS_FILE`.
+- **Rate limiting**: 60 RPM per key by default. Supports Redis backend for multi-instance deployments.
+- **CORS**: Restricted origins via `GENOVA_CORS_ORIGINS`. Set to your domain(s) in production.
+- **Container security**: Non-root user, read-only filesystem, dropped capabilities.
+
+### Generate an API key
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+### Configure for production
+
+```bash
+cp .env.example .env
+# Edit .env:
+#   GENOVA_API_KEYS=your-generated-key
+#   GENOVA_CORS_ORIGINS=https://your-domain.com
+```
+
+### Disable security for local development
+
+```bash
+export GENOVA_AUTH_ENABLED=0
+export GENOVA_RATE_LIMIT_ENABLED=0
+```
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+
+---
+
+## Deployment
+
+### Docker
+
+```bash
+# Build GPU image
+make docker-build
+
+# Run all services (API, TensorBoard)
+make docker-up
+
+# View logs
+make docker-logs
+
+# Stop
+make docker-down
+
+# Scan for vulnerabilities
+make docker-scan
+```
+
+### Kubernetes
+
+```bash
+# Deploy to staging
+make deploy-staging
+
+# Deploy to production (with 5-second confirmation delay)
+make deploy-production
+
+# Helm
+helm install genova deploy/helm/ -f deploy/helm/values-production.yaml
+
+# Lint Helm chart
+make helm-lint
+```
+
+### Model export (ONNX / TorchScript)
+
+```bash
+make check-export
+```
+
+---
+
+## Testing
+
+```bash
+# Run all tests (excludes slow and GPU-only)
+make test
+# or
+python -m pytest tests/ -m "not slow and not gpu"
+
+# Run specific test suites
+python -m pytest tests/unit/ -v                # Unit tests
+python -m pytest tests/integration/ -v         # Integration tests
+python -m pytest tests/truthset/ -v            # Biological correctness tests
+python -m pytest tests/benchmark/ -v           # Benchmark validation tests
+
+# Run with coverage report (65% threshold on core modules)
+make test-cov
+
+# Run full test suite including slow tests
+make test-all
+
+# Full local CI (lint + test + build)
+make ci
+```
+
+---
+
+## Development
+
+### Setup
+
+```bash
+# Install all dependencies including dev tools
+make install
+
+# This runs:
+#   poetry install --no-interaction
+#   poetry run pre-commit install
+```
+
+### Code quality
+
+```bash
+# Auto-format code (black + isort + ruff fix)
+make format
+
+# Check formatting and lint (without modifying)
+make lint
+
+# Type check (strict mypy)
+make typecheck
+
+# Security scan (pip-audit + bandit)
+make security-scan
+```
+
+### Makefile targets
+
+| Target | Description |
+|--------|-------------|
+| `make install` | Install all dependencies (including dev) |
+| `make install-prod` | Install production dependencies only |
+| `make format` | Auto-format code (black, isort, ruff) |
+| `make lint` | Run all linters |
+| `make typecheck` | Run mypy type checking |
+| `make test` | Run test suite (excludes slow/GPU) |
+| `make test-all` | Run full test suite |
+| `make test-cov` | Run tests with HTML coverage report |
+| `make ci` | Full local CI (lint + test + build) |
+| `make build` | Build Python package (wheel + sdist) |
+| `make security-scan` | Run security scans |
+| `make benchmark` | Run performance benchmarks |
+| `make docker-build` | Build Docker image |
+| `make docker-up` | Start services via docker compose |
+| `make docker-down` | Stop services |
+| `make docker-scan` | Scan Docker image for vulnerabilities |
+| `make serve` | Start API server locally (with reload) |
+| `make train` | Launch training run |
+| `make pipeline-small` | Full pipeline with small config |
+| `make pipeline-large` | Full pipeline with large config |
+| `make pipeline-mamba` | Full pipeline with Mamba config |
+| `make deploy-staging` | Deploy to staging via Helm |
+| `make deploy-production` | Deploy to production via Helm |
+| `make clean` | Remove build artifacts and caches |
+
+---
+
+## Project Architecture
 
 ```
 genova/
@@ -231,266 +867,6 @@ genova/
 
 ---
 
-## Model Configurations
-
-| Config | Layers | Hidden | Heads | Params | Use Case |
-|--------|--------|--------|-------|--------|----------|
-| Small | 4 | 128 | 4 | 852K | Development, testing |
-| Medium | 4 | 256 | 4 | 3.3M | Quick experiments |
-| Full | 12 | 768 | 12 | 86M | Production |
-| Mamba | 12 | 768 | — | 55M | Long sequences (100K+ bp) |
-
-```bash
-# Use predefined configs
-genova train --config configs/train_small.yaml
-genova train --config configs/train_large.yaml
-genova train --config configs/train_mamba.yaml
-```
-
----
-
-## Training Results
-
-Trained on real human genomic data (GRCh38):
-
-| Model | Data | Val PPL | Val Acc | Variant Acc |
-|-------|------|---------|---------|-------------|
-| Genova-4L-128d | chr22 (50M bp) | **3.55** | 39.9% | — |
-| Genova-4L-256d | 5 chr (337M bp) | **3.56** | 39.9% | **86.7%** |
-| Genova-12L-768d | 20 chr (2.78B bp) | 3.74* | 32.3%* | — |
-| DNABERT (ref.) | Full genome | ~4.2 | ~35% | — |
-
-*Undertrained on CPU (3K steps). Needs GPU for full convergence.
-
----
-
-## API
-
-```bash
-# Start server (auth + rate limiting enabled by default)
-genova serve --model-path outputs/my_model/best_model.pt
-
-# For local development without auth:
-GENOVA_AUTH_ENABLED=0 GENOVA_RATE_LIMIT_ENABLED=0 \
-  genova serve --model-path outputs/my_model/best_model.pt
-
-# Endpoints
-GET  /health              # Health check (unauthenticated)
-GET  /model/info          # Model metadata
-POST /predict_variant     # Variant pathogenicity
-POST /predict_expression  # Gene expression
-POST /predict_methylation # Methylation prediction
-POST /embed               # Sequence embeddings
-GET  /metrics             # Prometheus metrics
-WS   /ws/generate         # Streaming generation
-```
-
-```python
-import httpx
-
-# Predict variant effect (with API key)
-response = httpx.post(
-    "http://localhost:8000/predict_variant",
-    headers={"X-API-Key": "your-api-key"},
-    json={
-        "reference_sequence": "ATCGATCGATCG",
-        "variants": [{"position": 4, "ref": "A", "alt": "G"}],
-    },
-)
-print(response.json())
-
-# Get embedding
-response = httpx.post(
-    "http://localhost:8000/embed",
-    headers={"X-API-Key": "your-api-key"},
-    json={"sequence": "ATCGATCGATCGATCG", "pooling": "mean"},
-)
-embedding = response.json()["embedding"]
-```
-
----
-
-## Python API
-
-```python
-import torch
-from genova.data.tokenizer import GenomicTokenizer
-from genova.models.model_factory import create_model
-from genova.utils.config import ModelConfig
-
-# Create model
-config = ModelConfig(arch="transformer", d_model=256, n_layers=4,
-                     n_heads=4, d_ff=1024, vocab_size=10)
-model = create_model(config, task="mlm")
-
-# Tokenize
-tok = GenomicTokenizer(mode="nucleotide")
-tok.build_vocab()
-
-# Forward pass
-sequence = "ATCGATCGATCGATCGATCG"
-input_ids = torch.tensor([tok.encode(sequence)])
-output = model(input_ids)
-print(output["logits"].shape)  # (1, seq_len, vocab_size)
-```
-
-### Variant Prediction
-```python
-from genova.perturbation.variant_simulator import VariantSimulator
-
-sim = VariantSimulator(model, tokenizer=tok)
-effects = sim.saturate_snps("ATCGATCGATCGATCG")
-for e in effects[:5]:
-    print(f"  pos={e.position} {e.ref_allele}>{e.alt_allele} effect={e.effect_size:.4f}")
-```
-
-### Sequence Generation
-```python
-from genova.generative.autoregressive import AutoregressiveGenerator
-
-gen = AutoregressiveGenerator(model, tokenizer=tok)
-result = gen.generate(num_sequences=5, max_length=100, temperature=0.8, top_k=10)
-```
-
-### Explainability
-```python
-from genova.explainability.integrated_gradients import IntegratedGradientsExplainer
-
-explainer = IntegratedGradientsExplainer(model, tok)
-attributions = explainer.explain(sequence, n_steps=100)
-```
-
-### Uncertainty
-```python
-from genova.uncertainty.mc_dropout import MCDropoutPredictor
-
-mc = MCDropoutPredictor(model, n_forward_passes=30)
-result = mc.predict_with_uncertainty(input_ids)
-print(f"Mean: {result['mean'].shape}, Variance: {result['variance'].shape}")
-```
-
----
-
-## Security
-
-Genova 1.0 ships with **security enabled by default**:
-
-- **Authentication**: API key or JWT-based auth is on by default. Configure keys via `GENOVA_API_KEYS` or `GENOVA_API_KEYS_FILE`.
-- **Rate limiting**: 60 RPM per key by default. Supports Redis backend for multi-instance deployments.
-- **CORS**: Restricted origins via `GENOVA_CORS_ORIGINS`. Set to your domain(s) in production.
-- **Container security**: Non-root user, read-only filesystem, dropped capabilities.
-
-For local development, disable security features explicitly:
-```bash
-export GENOVA_AUTH_ENABLED=0
-export GENOVA_RATE_LIMIT_ENABLED=0
-```
-
-See [SECURITY.md](SECURITY.md) for vulnerability reporting.
-
----
-
-## Deployment
-
-### Docker
-```bash
-# Build GPU image
-make docker-build
-
-# Run all services (train, api, tensorboard)
-make docker-up
-
-# View logs
-make docker-logs
-```
-
-### Kubernetes
-```bash
-# Deploy to staging
-make deploy-staging
-
-# Deploy to production (with confirmation)
-make deploy-production
-
-# Helm
-helm install genova deploy/helm/ -f deploy/helm/values-production.yaml
-```
-
----
-
-## Testing
-
-```bash
-# All 522 tests
-make test
-
-# Specific suites
-python -m pytest tests/unit/ -v              # 221 unit tests
-python -m pytest tests/integration/ -v       # 204 integration tests
-python -m pytest tests/truthset/ -v          # 97 biological correctness tests
-
-# With coverage (65% minimum enforced on core modules)
-make test-cov
-
-# Full CI (lint + security audit + test + build)
-make ci
-```
-
----
-
-## Development
-
-```bash
-# Setup
-make install
-
-# Format + lint
-make format
-make lint
-
-# Type check (strict mode)
-make typecheck
-
-# Security scan
-make security-scan
-
-# Performance benchmark
-make benchmark
-```
-
----
-
-## CI/CD
-
-5 GitHub Actions pipelines:
-
-| Pipeline | Trigger | What it does |
-|----------|---------|-------------|
-| `ci.yml` | Push/PR | Lint, security audit, test (Python 3.10-3.12), build, Docker scan |
-| `cd.yml` | Tag `v*` | Release, deploy staging, deploy production |
-| `security.yml` | Push + weekly | Dependency scan, SAST, container scan, secret scan |
-| `docs.yml` | Push to main | Build API docs, deploy to GitHub Pages |
-| `performance.yml` | Push/PR + weekly | Benchmarks, load tests, PR comment |
-
----
-
-## Documentation
-
-| Document | Location |
-|----------|----------|
-| Changelog | [CHANGELOG.md](CHANGELOG.md) |
-| Security Policy | [SECURITY.md](SECURITY.md) |
-| Methodology (1,246 lines) | [docs/METHODOLOGY.md](docs/METHODOLOGY.md) |
-| Execution Guide | [docs/EXECUTION_GUIDE.md](docs/EXECUTION_GUIDE.md) |
-| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Model Card | [outputs/genova_expanded/MODEL_CARD.md](outputs/genova_expanded/MODEL_CARD.md) |
-| Quickstart Notebook | [docs/notebooks/01_quickstart.ipynb](docs/notebooks/01_quickstart.ipynb) |
-| Training Notebook | [docs/notebooks/02_training.ipynb](docs/notebooks/02_training.ipynb) |
-| Variant Analysis Notebook | [docs/notebooks/03_variant_analysis.ipynb](docs/notebooks/03_variant_analysis.ipynb) |
-| Generation Notebook | [docs/notebooks/04_generation.ipynb](docs/notebooks/04_generation.ipynb) |
-
----
-
 ## Benchmark Validation
 
 Genova validates variant prediction accuracy against independent benchmarks:
@@ -508,6 +884,38 @@ Run benchmark validation:
 python -m pytest tests/benchmark/ -v -m benchmark
 python -m pytest tests/truthset/ -v -m truthset
 ```
+
+---
+
+## CI/CD
+
+5 GitHub Actions pipelines:
+
+| Pipeline | Trigger | What it does |
+|----------|---------|-------------|
+| `ci.yml` | Push/PR | Lint, security audit, test (Python 3.10-3.13), build, Docker scan |
+| `cd.yml` | Tag `v*` | Release, deploy staging, deploy production |
+| `security.yml` | Push + weekly | Dependency scan, SAST, container scan, secret scan |
+| `docs.yml` | Push to main | Build API docs, deploy to GitHub Pages |
+| `performance.yml` | Push/PR + weekly | Benchmarks, load tests, PR comment |
+
+---
+
+## Documentation
+
+| Document | Location |
+|----------|----------|
+| Changelog | [CHANGELOG.md](CHANGELOG.md) |
+| Security Policy | [SECURITY.md](SECURITY.md) |
+| Environment Config | [.env.example](.env.example) |
+| Methodology (1,246 lines) | [docs/METHODOLOGY.md](docs/METHODOLOGY.md) |
+| Execution Guide | [docs/EXECUTION_GUIDE.md](docs/EXECUTION_GUIDE.md) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Model Card | [outputs/genova_expanded/MODEL_CARD.md](outputs/genova_expanded/MODEL_CARD.md) |
+| Quickstart Notebook | [docs/notebooks/01_quickstart.ipynb](docs/notebooks/01_quickstart.ipynb) |
+| Training Notebook | [docs/notebooks/02_training.ipynb](docs/notebooks/02_training.ipynb) |
+| Variant Analysis Notebook | [docs/notebooks/03_variant_analysis.ipynb](docs/notebooks/03_variant_analysis.ipynb) |
+| Generation Notebook | [docs/notebooks/04_generation.ipynb](docs/notebooks/04_generation.ipynb) |
 
 ---
 
